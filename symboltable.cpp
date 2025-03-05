@@ -4,7 +4,7 @@
 
 using namespace std;
 
-SymbolTable::SymbolTable()  // constructor function
+SymbolTable::SymbolTable()  
 {
     textCursor = TEXT_SEGMENT_START;
     dataCursor = DATA_SEGMENT_START;
@@ -12,7 +12,7 @@ SymbolTable::SymbolTable()  // constructor function
     currentSegment = TEXT;
 }
   
-void SymbolTable::addSymbol(const string& name, uint32_t address)  // function to add symbol
+void SymbolTable::addSymbol(const string& name, uint32_t address)  
 {
     if (symbols.find(name) != symbols.end()) 
     {
@@ -21,7 +21,7 @@ void SymbolTable::addSymbol(const string& name, uint32_t address)  // function t
     symbols[name] = address;
 }
 
-uint32_t SymbolTable::getSymbolAddress(const string& name) // get symbol address
+uint32_t SymbolTable::getSymbolAddress(const string& name) 
 {   
     //checking for symbols
     if (symbols.find(name) == symbols.end())
@@ -32,11 +32,20 @@ uint32_t SymbolTable::getSymbolAddress(const string& name) // get symbol address
     return symbols.at(name);
 }          
 
-bool SymbolTable::hasSymbol(const string& name)        // check if the symbol is there in table
+bool SymbolTable::hasSymbol(const string& name) 
+{
+    return symbols.find(name) != symbols.end();
+}       
 
-void SymbolTable::setCurrentSegment(MemorySegment segment)      // change current segment
+void SymbolTable::setCurrentSegment(MemorySegment segment)      
+{
+    currentSegment = segment;
+}
 
-MemorySegment SymbolTable::getCurrentSegment()      // returns current segment
+MemorySegment SymbolTable::getCurrentSegment()      
+{
+    return currentSegment;
+}
 
 uint32_t SymbolTable::getCurrentAddress() {
     switch (currentSegment) {
@@ -64,7 +73,7 @@ void SymbolTable::incrementAddress(uint32_t increment) {
         // heap and stack addresses not handled by the assembler
         case HEAP:
         case STACK:
-            cerr << "Warning: Attempting to increment address in heap or stack segment." << endl;  //throw error
+            cerr << "Warning!! Attempting to increment address in heap or stack segment." << endl;  //throw error
             break;
     }
 }
