@@ -48,7 +48,7 @@ vector<string> splitString(const string& str){
         tokens.push_back(token);
     }
     return tokens;
-}  // split the string by given delimiter
+}
 
 string removeComments(const string& line)
 // remove comments from line
@@ -104,7 +104,7 @@ Instruction parseLine(const string& line, int lineNumber) {
         }   
     } else {
         //operandsStr = regex_replace(s, regex(",\\s*"), " ");
-        instruction.operands = splitString(operandsStr, ' ');
+        instruction.operands = splitString(operandsStr);
     }
 
     return instruction;
