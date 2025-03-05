@@ -31,7 +31,7 @@ static unordered_map<string, InstructionType> instructionTypeMap = {
 };
 
 static unordered_map<string, bool> directiveMap = {
-    {".text", true}, {".data", true}, {".byte", true}, {".half", true}, {".word", true}, {".dword", true}, {".asciz", true}
+    {".text", true}, {".data", true}, {".byte", true}, {".half", true}, {".word", true}, {".dword", true}, {".asciiz", true}
 };
  
 bool isDirective(const string& token){      // check if the string is in directiveMap
