@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <cstdint>
 
+using namespace std;
+
 const uint32_t TEXT_SEGMENT_START = 0x00000000;
 const uint32_t DATA_SEGMENT_START = 0x10000000;
 const uint32_t HEAP_SEGMENT_START = 0x10008000;
