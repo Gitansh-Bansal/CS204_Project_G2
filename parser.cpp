@@ -59,7 +59,7 @@ Instruction parseLine(const string& line, int lineNumber) {
 
     size_t labelEnd = line.find(':');               // check if the line has a label
     if(labelEnd != string::nops) {
-        instruction.label = line.substr(0,labelEnd);
+        instruction.label = trimstring(line.substr(0,labelEnd));
         instruction.hasLabel = true;
         line = trimString(line.substr(labelEnd+1));
     }
