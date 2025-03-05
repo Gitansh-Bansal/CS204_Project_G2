@@ -44,9 +44,13 @@ vector<string> splitString(const string& str, char delimiter);  // split the str
 
 string removeComments(const string& line);      // remove comments from line
 
+void removeCommas(string& line){               // remove commas from line
+    std::replace(line.begin(), line.end(), ',', ' ');
+}
 
 Instruction parseLine(const string& line, int lineNumber) {
     Instruction instruction;
+    removeCommas(line);
     instruction.lineNumber = lineNumber;
     instruction.hasLabel = false;
 
@@ -71,7 +75,6 @@ Instruction parseLine(const string& line, int lineNumber) {
 
     size_t firstSpace = line.find(' ');
     instruction.opcode = trimString(line.substr(0, firstSpace));
-
     instruction.type = getInstructionType(instruction.opcode);
 
     operandsStr = trimString(line.substr(firstSpace+1));
