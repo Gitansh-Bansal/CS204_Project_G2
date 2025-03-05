@@ -5,10 +5,32 @@
 using namespace std;
 
 SymbolTable::SymbolTable()  // constructor function
+{
+    textCursor = TEXT_SEGMENT_START;
+    dataCursor = DATA_SEGMENT_START;
+    
+    currentSegment = TEXT;
+}
   
 void SymbolTable::addSymbol(const string& name, uint32_t address)  // function to add symbol
+{
+    if (symbols.find(name) != symbols.end()) 
+    {
+        cerr << "Warning!! Symbol '" << name << "' already defined. Overwriting previous value." << endl;
+    }
+    symbols[name] = address;
+}
 
-uint32_t SymbolTable::getSymbolAddress(const string& name)          // get symbol address
+uint32_t SymbolTable::getSymbolAddress(const string& name) // get symbol address
+{   
+    //checking for symbols
+    if (symbols.find(name) == symbols.end())
+    {
+        cerr << "Error!! Symbol '" << name << "' not found in symbol table." << endl;
+        return 0; 
+    }
+    return symbols.at(name);
+}          
 
 bool SymbolTable::hasSymbol(const string& name)        // check if the symbol is there in table
 
