@@ -48,7 +48,7 @@ InstructionType getInstructionType(const string& opcode){       // return the in
     return UNKNOWN;
 }
 
-string trimString(const string& str);       // remove any leading or trailing whitespaces
+string trimString(const string& str)       // remove any leading or trailing whitespaces
 {
     auto start= find_if_not(str.begin(), str.end(), [](char c) { return std::isspace(c); });
     auto end = find_if_not(str.rbegin(), str.rend(), [](char c) { return std::isspace(c); }).base();
@@ -78,13 +78,15 @@ string removeComments(const string& line){          // remove comments from line
     return line;
 }      
 
-void removeCommas(string& line){               // remove commas from line
-    std::replace(line.begin(), line.end(), ',', ' ');
+string removeCommas(const string& line){               // remove commas from line
+    string res=line;
+    std::replace(res.begin(), res.end(), ',', ' ');
+    return res;
 }
 
 Instruction parseLine(const string& line, int lineNumber) {
     Instruction instruction;
-    removeCommas(line);
+    line=removeCommas(line);
     instruction.lineNumber = lineNumber;
     instruction.hasLabel = false;
 
