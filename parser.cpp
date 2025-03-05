@@ -34,7 +34,9 @@ static unordered_map<string, bool> directiveMap = {
     {".text", true}, {".data", true}, {".byte", true}, {".half", true}, {".word", true}, {".dword", true}, {".asciz", true}
 };
  
-bool isDirective(const string& token);      // check if the string is in directiveMap
+bool isDirective(const string& token){      // check if the string is in directiveMap
+    return !token.empty() && token[0] == '.' && directiveMap.find(token) != directiveMap.end();
+}
 
 InstructionType getInstructionType(const string& opcode){       // return the instruction type from opcode
     if (instructionTypeMap.find(opcode) != instructionTypeMap.end()) {
