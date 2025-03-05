@@ -40,7 +40,7 @@ InstructionType getInstructionType(const string& opcode);       // return the in
 
 string trimString(const string& str);       // remove any leading or trailing whitespaces
 
-vector<string> splitString(const string& str){
+vector<string> splitString(const string& str){      // split string into tokens
     vector<string> tokens;
     std::istringstream ss(str);
     string token;
@@ -50,9 +50,7 @@ vector<string> splitString(const string& str){
     return tokens;
 }
 
-string removeComments(const string& line)
-// remove comments from line
-{
+string removeComments(const string& line){          // remove comments from line
     size_t pos = line.find('#');
     if (pos != string::npos) {
         return line.substr(0, pos);
