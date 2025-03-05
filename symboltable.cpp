@@ -83,4 +83,21 @@ void SymbolTable::resetCursors() {
     dataCursor = DATA_SEGMENT_START;
 }
 
-void SymbolTable::printSymbolTable()          // print sumbol table
+void SymbolTable::printSymbolTable() {
+    // Print the symbol table for debugging
+    cout << "Symbol Table:" << endl;
+    cout << "-------------" << endl;
+    cout << left << setw(20) << "Symbol" << "Address" << endl;
+    cout << "-------------------------------" << endl;
+    
+    for (const auto& entry : symbols) {
+        cout << left << setw(20) << entry.first 
+                  << "0x" << hex << setw(8) << setfill('0') << right
+                  << entry.second << dec << setfill(' ') << endl;
+    }
+    
+    cout << "-------------------------------" << endl;
+    cout << "Text Cursor: 0x" << hex << setw(8) << setfill('0') << textCursor << endl;
+    cout << "Data Cursor: 0x" << hex << setw(8) << setfill('0') << dataCursor << endl;
+    cout << dec << setfill(' ');
+}
