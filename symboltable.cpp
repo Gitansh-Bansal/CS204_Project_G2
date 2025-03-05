@@ -83,7 +83,7 @@ void SymbolTable::resetCursors() {
     dataCursor = DATA_SEGMENT_START;
 }
 
-void SymbolTable::printSymbolTable() {
+void SymbolTable::printSymbolTable() const {
     // Print the symbol table for debugging
     cout << "Symbol Table:" << endl;
     cout << "-------------" << endl;
