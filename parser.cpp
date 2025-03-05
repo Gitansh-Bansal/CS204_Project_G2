@@ -36,7 +36,15 @@ static unordered_map<string, bool> directiveMap = {
  
 bool isDirective(const string& token);      // check if the string is in directiveMap
 
-InstructionType getInstructionType(const string& opcode);       // return the instruction type from opcode
+InstructionType getInstructionType(const string& opcode){       // return the instruction type from opcode
+    if (instructionTypeMap.find(opcode) != instructionTypeMap.end()) {
+        return instructionTypeMap[opcode];
+    }
+    if (isDirective(opcode)) {
+        return DIRECTIVE;
+    }
+    return UNKNOWN;
+}
 
 string trimString(const string& str);       // remove any leading or trailing whitespaces
 
