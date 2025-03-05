@@ -50,7 +50,15 @@ vector<string> splitString(const string& str){
     return tokens;
 }  // split the string by given delimiter
 
-string removeComments(const string& line);      // remove comments from line
+string removeComments(const string& line)
+// remove comments from line
+{
+    size_t pos = line.find('#');
+    if (pos != string::npos) {
+        return line.substr(0, pos);
+    }
+    return line;
+}      
 
 void removeCommas(string& line){               // remove commas from line
     std::replace(line.begin(), line.end(), ',', ' ');
