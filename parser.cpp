@@ -40,7 +40,15 @@ InstructionType getInstructionType(const string& opcode);       // return the in
 
 string trimString(const string& str);       // remove any leading or trailing whitespaces
 
-vector<string> splitString(const string& str, char delimiter);  // split the string by given delimiter
+vector<string> splitString(const string& str){
+    vector<string> tokens;
+    std::istringstream ss(str);
+    string token;
+    while (ss >> token) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}  // split the string by given delimiter
 
 string removeComments(const string& line);      // remove comments from line
 
@@ -87,7 +95,7 @@ Instruction parseLine(const string& line, int lineNumber) {
             instruction.operands.push_back(match[0]);
         }   
     } else {
-        operandsStr = regex_replace(s, regex(",\\s*"), " ");
+        //operandsStr = regex_replace(s, regex(",\\s*"), " ");
         instruction.operands = splitString(operandsStr, ' ');
     }
 
