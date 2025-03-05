@@ -16,10 +16,40 @@ void SymbolTable::setCurrentSegment(MemorySegment segment)      // change curren
 
 MemorySegment SymbolTable::getCurrentSegment()      // returns current segment
 
-uint32_t SymbolTable::getCurrentAddress()      // current address in text/data
+uint32_t SymbolTable::getCurrentAddress() {
+    switch (currentSegment) {
+        case TEXT:
+            return textCursor;
+        case DATA:
+            return dataCursor;
+        case HEAP:
+            return HEAP_SEGMENT_START; 
+        case STACK:
+            return STACK_SEGMENT_START; 
+        default:
+            return 0;
+    }
+}
 
-void SymbolTable::incrementAddress(uint32_t increment)      // increment the address
+void SymbolTable::incrementAddress(uint32_t increment) {
+    switch (currentSegment) {
+        case TEXT:
+            textCursor += increment;
+            break;
+        case DATA:
+            dataCursor += increment;
+            break;
+        // heap and stack addresses not handled by the assembler
+        case HEAP:
+        case STACK:
+            cerr << "Warning: Attempting to increment address in heap or stack segment." << endl;  //throw error
+            break;
+    }
+}
 
-void SymbolTable::resetCursors()              // reset text / data cursor
+void SymbolTable::resetCursors() {
+    textCursor = TEXT_SEGMENT_START;
+    dataCursor = DATA_SEGMENT_START;
+}
 
 void SymbolTable::printSymbolTable()          // print sumbol table
