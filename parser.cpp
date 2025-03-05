@@ -33,17 +33,84 @@ static unordered_map<string, InstructionType> instructionTypeMap = {
 static unordered_map<string, bool> directiveMap = {
     {".text", true}, {".data", true}, {".byte", true}, {".half", true}, {".word", true}, {".dword", true}, {".asciz", true}
 };
+ 
+bool isDirective(const string& token);      // check if the string is in directiveMap
 
-bool isDirective(const string& token);
+InstructionType getInstructionType(const string& opcode);       // return the instruction type from opcode
 
-InstructionType getInstructionType(const string& opcode);
+string trimString(const string& str);       // remove any leading or trailing whitespaces
 
-string trimString(const string& str);
+vector<string> splitString(const string& str, char delimiter);  // split the string by given delimiter
 
-vector<string> splitString(const string& str, char delimiter);
+string removeComments(const string& line);      // remove comments from line
 
-string removeComments(const string& line);
 
-Instruction parseLine(const string& line, int lineNumber);
+Instruction parseLine(const string& line, int lineNumber) {
+    Instruction instruction;
+    instruction.lineNumber = lineNumber;
+    instruction.hasLabel = false;
 
-vector<Instruction> parseFile(const string& filename);
+    line = trimString(removeComments(line));        // remove comments, leading and trailing whitespaces
+
+    if (line.empty()) {
+        instruction.type = UNKNOWN;
+        return instruction;
+    }
+
+    size_t labelEnd = line.find(':');               // check if the line has a label
+    if(labelEnd != string::nops) {
+        instruction.label = line.substr(0,labelEnd);
+        instruction.hasLabel = true;
+        line = trimString(line.substr(labelEnd+1));
+    }
+
+    if (line.empty()) {
+        instruction.type = LABEL;
+        return instruction;
+    }
+
+    size_t firstSpace = line.find(' ');
+    instruction.opcode = trimString(line.substr(0, firstSpace));
+
+    instruction.type = getInstructionType(instruction.opcode);
+
+    operandsStr = trimString(line.substr(firstSpace+1));
+
+
+    if (instruction.opcode == ".asciiz") {
+        regex stringPattern("\"([^\"]*)\"");        // string enclosed in double quotes
+        smatch match;
+        if (regex_search(operandsStr, match, stringPattern)) {
+            instruction.operands.push_back(match[0]);
+        }   
+    } else {
+        operandsStr = regex_replace(s, regex(",\\s*"), " ");
+        instruction.operands = splitString(operandsStr, ' ');
+    }
+
+    return instruction;
+}
+
+vector<Instruction> parseFile(const string& filename) {
+    vector<Instruction> instructions;
+    ifstream file(filename);
+
+    if (!file.is_open()) {
+        cout << "Error: Could not open file : " << filename << endl;
+        return instructions;
+    }
+
+    string line;
+    int lineNumber = 0;
+
+    while(getline(file, line)) {
+        Instruction instr = parseLine(line, lineNumber);
+        if (instr.type != UNKNOWN || instr.hasLabel) {
+            instructions.push_back(instr);
+        }
+        lineNumber++;
+    }
+
+    file.close();
+    return instructions;
+}
