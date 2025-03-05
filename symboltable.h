@@ -32,14 +32,14 @@ public:
     SymbolTable();
     
     void addSymbol(const string& name, uint32_t address);
-    uint32_t getSymbolAddress(const string& name) const;
-    bool hasSymbol(const string& name) const;
+    uint32_t getSymbolAddress(const string& name);
+    bool hasSymbol(const string& name);
     void setCurrentSegment(MemorySegment segment);
-    MemorySegment getCurrentSegment() const;
-    uint32_t getCurrentAddress() const;
+    MemorySegment getCurrentSegment();
+    uint32_t getCurrentAddress();
     void incrementAddress(uint32_t increment);
     void resetCursors();
-    void printSymbolTable() const;
+    void printSymbolTable();
 };
 
 #endif
