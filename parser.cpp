@@ -84,9 +84,9 @@ string removeCommas(const string& line){               // remove commas from lin
     return res;
 }
 
-Instruction parseLine(const string& line, int lineNumber) {
+Instruction parseLine(const string& rawline, int lineNumber) {
     Instruction instruction;
-    line=removeCommas(line);
+    string line=removeCommas(rawline);
     instruction.lineNumber = lineNumber;
     instruction.hasLabel = false;
 
@@ -98,8 +98,8 @@ Instruction parseLine(const string& line, int lineNumber) {
     }
 
     size_t labelEnd = line.find(':');               // check if the line has a label
-    if(labelEnd != string::nops) {
-        instruction.label = trimstring(line.substr(0,labelEnd));
+    if(labelEnd != string::npos) {
+        instruction.label = trimString(line.substr(0,labelEnd));
         instruction.hasLabel = true;
         line = trimString(line.substr(labelEnd+1));
     }
@@ -113,7 +113,7 @@ Instruction parseLine(const string& line, int lineNumber) {
     instruction.opcode = trimString(line.substr(0, firstSpace));
     instruction.type = getInstructionType(instruction.opcode);
 
-    operandsStr = trimString(line.substr(firstSpace+1));
+    string operandsStr = trimString(line.substr(firstSpace+1));
 
 
     if (instruction.opcode == ".asciiz") {
