@@ -21,7 +21,7 @@ void SymbolTable::addSymbol(const string& name, uint32_t address)
     symbols[name] = address;
 }
 
-uint32_t SymbolTable::getSymbolAddress(const string& name) 
+uint32_t SymbolTable::getSymbolAddress(const string& name) const
 {   
     //checking for symbols
     if (symbols.find(name) == symbols.end())
@@ -32,7 +32,7 @@ uint32_t SymbolTable::getSymbolAddress(const string& name)
     return symbols.at(name);
 }          
 
-bool SymbolTable::hasSymbol(const string& name) 
+bool SymbolTable::hasSymbol(const string& name) const
 {
     return symbols.find(name) != symbols.end();
 }       
@@ -42,12 +42,12 @@ void SymbolTable::setCurrentSegment(MemorySegment segment)
     currentSegment = segment;
 }
 
-MemorySegment SymbolTable::getCurrentSegment()      
+MemorySegment SymbolTable::getCurrentSegment() const 
 {
     return currentSegment;
 }
 
-uint32_t SymbolTable::getCurrentAddress() {
+uint32_t SymbolTable::getCurrentAddress() const {
     switch (currentSegment) {
         case TEXT:
             return textCursor;
