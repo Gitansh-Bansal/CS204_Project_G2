@@ -49,6 +49,16 @@ InstructionType getInstructionType(const string& opcode){       // return the in
 }
 
 string trimString(const string& str);       // remove any leading or trailing whitespaces
+{
+    auto start= find_if_not(str.begin(), str.end(), [](char c) { return std::isspace(c); });
+    auto end = find_if_not(str.rbegin(), str.rend(), [](char c) { return std::isspace(c); }).base();
+
+    if (start >= end) {
+        return "";
+    }
+    return string(start, end);
+    
+}
 
 vector<string> splitString(const string& str){      // split string into tokens
     vector<string> tokens;
