@@ -87,6 +87,7 @@ string removeCommas(const string& line){               // remove commas from lin
 Instruction parseLine(const string& rawline, int lineNumber) {
     Instruction instruction;
     string line=removeCommas(rawline);
+    string line1=removeComments(rawline);
     instruction.lineNumber = lineNumber;
     instruction.hasLabel = false;
 
@@ -119,7 +120,7 @@ Instruction parseLine(const string& rawline, int lineNumber) {
     if (instruction.opcode == ".asciiz") {
         regex stringPattern("\"([^\"]*)\"");        // string enclosed in double quotes
         smatch match;
-        if (regex_search(operandsStr, match, stringPattern)) {
+        if (regex_search(line1, match, stringPattern)) {
             instruction.operands.push_back(match[0]);
         }   
     } else {
