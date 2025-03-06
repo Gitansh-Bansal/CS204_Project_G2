@@ -191,7 +191,6 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
     return (imm_11_5 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_4_0 << 7) | opcode;
 }
 
-
 uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable){
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
@@ -254,5 +253,40 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
 
 
 uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
+{
+    uint32_t opcode = opcodeMap.at(instr.opcode);
+    int32_t rd = parseRegister(instr.operands[0],instr.lineNumber);
+
+    // Get target label address
+    int32_t targetAddress;
+    if (symbolTable.hasSymbol(instr.operands[1])) {
+        targetAddress = symbolTable.getSymbolAddress(instr.operands[1]);
+    } else {
+        cerr << "Error: Undefined label in jump instruction at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
+    // Calculate jump offset (relative to PC)
+    int32_t offset = targetAddress - address;
+    
+    if (rd < 0) {
+        cerr << "Error: Invalid register in UJ-type instruction at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
+    // Check if offset is in range and aligned
+    if (offset % 2 != 0 || offset > 1048575 || offset < -1048576) {
+        cerr << "Error: Jump offset out of range at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
+    // Extract bits for UJ encoding
+    uint32_t imm_20 = (offset >> 20) & 0x1;
+    uint32_t imm_19_12 = (offset >> 12) & 0xFF;
+    uint32_t imm_11 = (offset >> 11) & 0x1;
+    uint32_t imm_10_1 = (offset >> 1) & 0x3FF;
+    return (imm_20 << 31) | (imm_10_1 << 21) | (imm_11 << 20) | (imm_19_12 << 12) | (rd << 7) | opcode;
+
+}
 
 vector<uint8_t> encodeDirective(const Instruction& instr);
