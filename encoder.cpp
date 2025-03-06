@@ -184,7 +184,6 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
         return 0;
     }
 
-    // Split immediate into two parts for S-type encoding
     uint32_t imm_11_5 = (imm >> 5) & 0x7F;
     uint32_t imm_4_0 = imm & 0x1F;
     
