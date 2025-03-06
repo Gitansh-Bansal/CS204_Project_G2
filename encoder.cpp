@@ -116,7 +116,44 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
 }
 
 uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
-uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
+
+
+uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable){
+    uint32_t opcode = opcodeMap.at(instr.opcode);
+    uint32_t funct3 = funct3Map.at(instr.opcode);
+    
+    int32_t rs1 = parseRegister(instr.operands[0]);
+    int32_t rs2 = parseRegister(instr.operands[1]);
+    
+    int32_t labelAddress;
+    if (symbolTable.hasSymbol(instr.operands[2])) {
+        labelAddress = symbolTable.getSymbolAddress(instr.operands[2]);
+    } else {
+        cerr << "Error: Undefined label in branch instruction at line " << instr.lineNumber << endl;
+        return 0;
+    }
+    
+    int32_t offset = labelAddress - address;
+    
+    if (rs1 < 0 || rs2 < 0) {
+        cerr << "Error: Invalid register in SB-type instruction at line " << instr.lineNumber << endl;
+        return 0;
+    }
+    
+    if (offset % 2 != 0 || offset > 4095 || offset < -4096) {
+        cerr << "Error: Branch offset out of range at line " << instr.lineNumber << endl;
+        return 0;
+    }
+    
+    uint32_t imm_12 = (offset >> 12) & 0x1;
+    uint32_t imm_11 = (offset >> 11) & 0x1;
+    uint32_t imm_10_5 = (offset >> 5) & 0x3F;
+    uint32_t imm_4_1 = (offset >> 1) & 0xF;
+    
+    return (imm_12 << 31) | (imm_10_5 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_4_1 << 8) | (imm_11 << 7) | opcode;
+}
+
+
 uint32_t encodeU(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
 uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
 
