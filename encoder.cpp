@@ -3,6 +3,49 @@
 #include <vector>
 using namespace std;
 
+int32_t parseRegister(const string& reg) {
+    unordered_map <string, int> reg_map = {
+        {"x0", 0}, {"x1", 1}, {"x2", 2}, {"x3", 3},
+        {"x4", 4}, {"x5", 5}, {"x6", 6}, {"x7", 7},
+        {"x8", 8}, {"x9", 9}, {"x10", 10}, {"x11", 11},
+        {"x12", 12}, {"x13", 13}, {"x14", 14}, {"x15", 15},
+        {"x16", 16}, {"x17", 17}, {"x18", 18}, {"x19", 19},
+        {"x20", 20}, {"x21", 21}, {"x22", 22}, {"x23", 23},
+        {"x24", 24}, {"x25", 25}, {"x26", 26}, {"x27", 27},
+        {"x28", 28}, {"x29", 29}, {"x30", 30}, {"x31", 31},
+        {"zero", 0}, {"ra", 1}, {"sp", 2}, {"gp", 3},
+        {"tp", 4}, {"t0", 5}, {"t1", 6}, {"t2", 7},
+        {"s0", 8}, {"fp", 8}, {"s1", 9}, {"a0", 10},
+        {"a1", 11}, {"a2", 12}, {"a3", 13}, {"a4", 14},
+        {"a5", 15}, {"a6", 16}, {"a7", 17}, {"s2", 18},
+        {"s3", 19}, {"s4", 20}, {"s5", 21}, {"s6", 22},
+        {"s7", 23}, {"s8", 24}, {"s9", 25}, {"s10", 26},
+        {"s11", 27}, {"t3", 28}, {"t4", 29}, {"t5", 30},
+        {"t6", 31}
+    };
+    if (reg.empty()) return -1;
+    if (reg_map.find(reg) != reg_map.end()) {
+        return reg_map[reg];
+    }
+    return -1;
+}
+
+int32_t parseImmediate(const string& imm, const int& linenum) {
+    try {
+        if (imm.size() > 2 && imm.substr(0, 2) == "0x") {
+            return stoi(imm.substr(2), nullptr, 16);
+        } 
+        if (imm.size() > 2 && imm.substr(0, 2) == "0b") {
+            return stoi(imm.substr(2), nullptr, 2);
+        }
+        return stoi(imm);
+    } catch (const exception&) {
+        cerr << "Error: Invalid immediate value at line " << linenum << endl;
+        return 0;
+    }
+}
+
+
 static const unordered_map<string, uint32_t> opcodeMap = {
     // R-type
     {"add", 0x33}, {"sub", 0x33}, {"sll", 0x33}, {"slt", 0x33},
@@ -75,11 +118,11 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
         rd = parseRegister(instr.operands[0]);
         if (parseRegister(instr.operands[1])!= -1) {
             rs1 = parseRegister(instr.operands[1]);
-            imm = parseImmediate(instr.operands[2]);
+            imm = parseImmediate(instr.operands[2],instr.lineNumber);
         }
         else if (parseRegister(instr.operands[2])!= -1) {
             rs1 = parseRegister(instr.operands[2]);
-            imm = parseImmediate(instr.operands[1]);
+            imm = parseImmediate(instr.operands[1],instr.lineNumber);
         }
         else {
             cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
@@ -90,7 +133,7 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
     // load instructions (lb, lh, lw, ld)
     else if (instr.opcode == "lb" || instr.opcode == "lh" || instr.opcode == "lw" || instr.opcode == "ld") {
         rd = parseRegister(instr.operands[0]);
-        imm = parseImmediate(instr.operands[1]);
+        imm = parseImmediate(instr.operands[1],instr.lineNumber);
         rs1 = parseRegister(instr.operands[2]);
     } 
 
@@ -102,7 +145,7 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
         if (symbolTable.hasSymbol(instr.operands[2])) {
             imm = symbolTable.getSymbolAddress(instr.operands[2]);
         } else {
-            imm = parseImmediate(instr.operands[2]);
+            imm = parseImmediate(instr.operands[2],instr.lineNumber);
         }
     }
     
@@ -127,7 +170,7 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
     }
 
     rs2 = parseRegister(instr.operands[0]);
-    imm = parseImmediate(instr.operands[1]);
+    imm = parseImmediate(instr.operands[1],instr.lineNumber);
     rs1 = parseRegister(instr.operands[2]);
     
     if (rs1 < 0 || rs2 < 0) {
@@ -194,7 +237,7 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
     if (symbolTable.hasSymbol(instr.operands[1])) {
         imm = symbolTable.getSymbolAddress(instr.operands[1]);
     } else {
-        imm = parseImmediate(instr.operands[1]);
+        imm = parseImmediate(instr.operands[1],instr.lineNumber);
     }
     
     uint32_t imm_31_12 = imm & 0xFFFFF;     // 20 bits of immediate, in case its bigger
