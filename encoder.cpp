@@ -289,4 +289,55 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
 
 }
 
-vector<uint8_t> encodeDirective(const Instruction& instr);
+vector<uint8_t> encodeDirective(const Instruction& instr) {
+    vector<uint8_t> data;
+    
+    if (instr.opcode == ".byte") {
+        for (const auto& operand : instr.operands) {
+            int32_t value = parseImmediate(operand);
+            auto val1 = value & 0xFF;
+            if (value != val1) cerr << "Error: Too big entry "<< value << " to fit in byte at line " << instr.lineNumber<< endl;
+            
+            data.push_back(static_cast<uint8_t>(val1));
+        }
+    } else if (instr.opcode == ".half") {
+        for (const auto& operand : instr.operands) {
+            int32_t value = parseImmediate(operand); 
+            if (value >> 16 != 0) cerr << "Error: Too big entry "<< value << " to fit in half word at line " << instr.lineNumber<< endl;
+            
+            data.push_back(static_cast<uint8_t>(value & 0xFF));
+            data.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
+        }
+    } else if (instr.opcode == ".word") {
+        for (const auto& operand : instr.operands) {
+            int32_t value = parseImmediate(operand);
+            if (value >> 32 != 0) cerr << "Error: Too big entry "<< value << " to fit in word at line " << instr.lineNumber<< endl;
+
+            data.push_back(static_cast<uint8_t>(value & 0xFF));
+            data.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
+            data.push_back(static_cast<uint8_t>((value >> 16) & 0xFF));
+            data.push_back(static_cast<uint8_t>((value >> 24) & 0xFF));
+        }
+    } else if (instr.opcode == ".dword") {
+        for (const auto& operand : instr.operands) {
+            int64_t value = parseImmediate(operand);
+            if (value >> 64 != 0) cerr << "Error: Too big entry "<< value << " to fit in double word at line " << instr.lineNumber<< endl;
+
+            for (int i = 0; i < 8; i++) {
+                data.push_back(static_cast<uint8_t>((value >> (i * 8)) & 0xFF));
+            }
+        }
+    } else if (instr.opcode == ".asciiz") {
+        string str = instr.operands[0];
+        if (str.size() >= 2 && str.front() == '"' && str.back() == '"') {
+            str = str.substr(1, str.size() - 2);
+        }
+        
+        for (char c : str) {
+            data.push_back(static_cast<uint8_t>(c));
+        }
+        data.push_back(0);        // null terminator
+    }
+    
+    return data;
+}
