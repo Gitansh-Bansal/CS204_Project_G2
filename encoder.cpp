@@ -116,6 +116,33 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
 }
 
 uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
+{
+    uint32_t opcode = opcodeMap.at(instr.opcode);
+    uint32_t funct3 = funct3Map.at(instr.opcode);
+    int32_t rs1, rs2, imm;
+
+    if (instr.operands.size() < 3) {
+        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
+    rs2 = parseRegister(instr.operands[0]);
+    imm = parseImmediate(instr.operands[1]);
+    rs1 = parseRegister(instr.operands[2]);
+    
+    if (rs1 < 0 || rs2 < 0) {
+        cerr << "Error: Invalid register in I-type instruction at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
+    // Split immediate into two parts for S-type encoding
+    uint32_t imm_11_5 = (imm >> 5) & 0x7F;
+    uint32_t imm_4_0 = imm & 0x1F;
+    
+    return (imm_11_5 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_4_0 << 7) | opcode;
+
+}
+uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
 
 
 uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable){
