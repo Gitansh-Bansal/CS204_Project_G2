@@ -1,6 +1,12 @@
 #include <string>
 #include <cstdint>
 #include <vector>
+#include <fstream>
+#include <iostream>
+#include <algorithm>
+#include <bitset>
+#include <unordered_map>
+#include <iomanip>
 #include "encoder.h"
 using namespace std;
 
@@ -118,7 +124,7 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
     int32_t rd, rs1, imm;
 
     if (instr.operands.size() < 3) {
-        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+        cerr << "Error: Invalid I-type instruction format at " << instr.lineNumber << endl;
         return 0;
     }
 
@@ -172,14 +178,13 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
     return encodedInstr;
 }
 
-uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
-{
+uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable){
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     int32_t rs1, rs2, imm;
 
     if (instr.operands.size() < 3) {
-        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+        cerr << "Error: Invalid S-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
 
@@ -188,7 +193,7 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
     rs1 = parseRegister(instr.operands[2]);
     
     if (rs1 < 0 || rs2 < 0) {
-        cerr << "Error: Invalid register in I-type instruction at line " << instr.lineNumber << endl;
+        cerr << "Error: Invalid register in S-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
 
@@ -208,7 +213,7 @@ uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& sy
     uint32_t funct3 = funct3Map.at(instr.opcode);
     
     if (instr.operands.size() < 3) {
-        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+        cerr << "Error: Invalid SB-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
     
@@ -223,7 +228,7 @@ uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& sy
         return 0;
     }
     
-    int32_t offset = labelAddress - address;
+    int32_t offset = labelAddress - addr;
     
     if (rs1 < 0 || rs2 < 0) {
         cerr << "Error: Invalid register in SB-type instruction at line " << instr.lineNumber << endl;
@@ -248,7 +253,7 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
     uint32_t opcode = opcodeMap.at(instr.opcode);
 
     if (instr.operands.size() < 2) {
-        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+        cerr << "Error: Invalid U-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
     
@@ -279,16 +284,15 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
 }
 
 
-uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
-{
+uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable){
     uint32_t opcode = opcodeMap.at(instr.opcode);
 
-    if (instr.operands.size() < 3) {
-        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+    if (instr.operands.size() < 2) {
+        cerr << "Error: Invalid UJ-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
 
-    int32_t rd = parseRegister(instr.operands[0],instr.lineNumber);
+    int32_t rd = parseRegister(instr.operands[0]);
 
     int32_t targetAddress;
     if (symbolTable.hasSymbol(instr.operands[1])) {
@@ -298,7 +302,7 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
         return 0;
     }
 
-    int32_t offset = targetAddress - address;
+    int32_t offset = targetAddress - addr;
     
     if (rd < 0) {
         cerr << "Error: Invalid register in UJ-type instruction at line " << instr.lineNumber << endl;
@@ -310,10 +314,6 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
         return 0;
     }
 
-    if (imm < -1048576 || imm > 1048574) {  
-        cerr << "Error: Immediate value out of range [-1048576, 1048574] at line " << instr.lineNumber << endl;
-        return 0;
-    }
 
     uint32_t imm_20 = (offset >> 20) & 0x1;
     uint32_t imm_19_12 = (offset >> 12) & 0xFF;
@@ -328,7 +328,7 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     
     if (instr.opcode == ".byte") {
         for (const auto& operand : instr.operands) {
-            int32_t value = parseImmediate(operand);
+            int32_t value = parseImmediate(operand, instr.lineNumber);
             auto val1 = value & 0xFF;
             if (value != val1) cerr << "Error: Too big entry "<< value << " to fit in byte at line " << instr.lineNumber<< endl;
             
@@ -336,7 +336,7 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
         }
     } else if (instr.opcode == ".half") {
         for (const auto& operand : instr.operands) {
-            int32_t value = parseImmediate(operand); 
+            int32_t value = parseImmediate(operand, instr.lineNumber); 
             if (value >> 16 != 0) cerr << "Error: Too big entry "<< value << " to fit in half word at line " << instr.lineNumber<< endl;
             
             data.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -344,8 +344,8 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
         }
     } else if (instr.opcode == ".word") {
         for (const auto& operand : instr.operands) {
-            int32_t value = parseImmediate(operand);
-            if (value >> 32 != 0) cerr << "Error: Too big entry "<< value << " to fit in word at line " << instr.lineNumber<< endl;
+            int32_t value = parseImmediate(operand, instr.lineNumber);
+            if (value > 0xFFFFFFFF || value < -0x80000000) cerr << "Error: Too big entry "<< value << " to fit in word at line " << instr.lineNumber<< endl;
 
             data.push_back(static_cast<uint8_t>(value & 0xFF));
             data.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
@@ -354,8 +354,8 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
         }
     } else if (instr.opcode == ".dword") {
         for (const auto& operand : instr.operands) {
-            int64_t value = parseImmediate(operand);
-            if (value >> 64 != 0) cerr << "Error: Too big entry "<< value << " to fit in double word at line " << instr.lineNumber<< endl;
+            int32_t value = parseImmediate(operand, instr.lineNumber);
+            if (value > 0xFFFFFFFFFFFFFFFF || value < -0x8000000000000000) cerr << "Error: Too big entry "<< value << " to fit in double word at line " << instr.lineNumber<< endl;
 
             for (int i = 0; i < 8; i++) {
                 data.push_back(static_cast<uint8_t>((value >> (i * 8)) & 0xFF));
@@ -397,7 +397,7 @@ uint32_t encodeInstruction(const Instruction& instr, uint32_t address, const Sym
 }
 
 string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
-    string comment="";
+    stringstream comment;
     
     switch (instr.type) {
         case R_TYPE: {
@@ -408,13 +408,13 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
             uint32_t rs2 = (machineCode >> 20) & 0x1F;
             uint32_t funct7 = (machineCode >> 25) & 0x7F;
             
-            comment = bitset<7>(opcode) + "-"
-                    + bitset<3>(funct3) + "-"
-                    + bitset<7>(funct7) + "-"
-                    + bitset<5>(rd) + "-"
-                    + bitset<5>(rs1) + "-"
-                    + bitset<5>(rs2) + "-"
-                    + "NULL";
+            comment << bitset<7>(opcode) << "-"
+                    << bitset<3>(funct3) << "-"
+                    << bitset<7>(funct7) << "-"
+                    << bitset<5>(rd) << "-"
+                    << bitset<5>(rs1) << "-"
+                    << bitset<5>(rs2) << "-"
+                    << "NULL";
             break;
         }
         case I_TYPE: {
@@ -424,12 +424,12 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
             uint32_t rs1 = (machineCode >> 15) & 0x1F;
             uint32_t imm = (machineCode >> 20) & 0xFFF;
             
-            comment = bitset<7>(opcode) + "-"
-                    + bitset<3>(funct3) + "-"
-                    + "NULL" + "-"
-                    + bitset<5>(rd) + "-"
-                    + bitset<5>(rs1) + "-"
-                    + bitset<12>(imm);
+            comment << bitset<7>(opcode) << "-"
+                    << bitset<3>(funct3) << "-"
+                    << "NULL" << "-"
+                    << bitset<5>(rd) << "-"
+                    << bitset<5>(rs1) << "-"
+                    << bitset<12>(imm);
             break;
         }
         case S_TYPE: {
@@ -441,13 +441,13 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
             uint32_t imm_11_5 = (machineCode >> 25) & 0x7F;
             uint32_t imm = (imm_11_5 << 5) | imm_4_0;
             
-            comment = bitset<7>(opcode) + "-"
-                    + bitset<3>(funct3) + "-"
-                    + "NULL" + "-"
-                    + "NULL" + "-"
-                    + bitset<5>(rs1) + "-"
-                    + bitset<5>(rs2) + "-"
-                    + bitset<12>(imm);
+            comment << bitset<7>(opcode) << "-"
+                    << bitset<3>(funct3) << "-"
+                    << "NULL" << "-"
+                    << "NULL" << "-"
+                    << bitset<5>(rs1) << "-"
+                    << bitset<5>(rs2) << "-"
+                    << bitset<12>(imm);
             break;
         }
         case SB_TYPE: {
@@ -462,13 +462,13 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
             
             uint32_t imm = (imm_12 << 12) | (imm_11 << 11) | (imm_10_5 << 5) | (imm_4_1 << 1);
             
-            comment = bitset<7>(opcode) + "-"
-                    + bitset<3>(funct3) + "-"
-                    + "NULL" + "-"
-                    + "NULL" + "-"
-                    + bitset<5>(rs1) + "-"
-                    + bitset<5>(rs2) + "-"
-                    + bitset<13>(imm);
+            comment << bitset<7>(opcode) << "-"
+                    << bitset<3>(funct3) << "-"
+                    << "NULL" << "-"
+                    << "NULL" << "-"
+                    << bitset<5>(rs1) << "-"
+                    << bitset<5>(rs2) << "-"
+                    << bitset<13>(imm);
             break;
         }
         case U_TYPE: {
@@ -476,13 +476,13 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
             uint32_t rd = (machineCode >> 7) & 0x1F;
             uint32_t imm_31_12 = (machineCode >> 12) & 0xFFFFF;
             
-            comment = bitset<7>(opcode) + "-"
-                    + "NULL" + "-"
-                    + "NULL" + "-"
-                    + bitset<5>(rd) + "-"
-                    + "NULL" + "-"
-                    + "NULL" + "-"
-                    + bitset<20>(imm_31_12);
+            comment << bitset<7>(opcode) << "-"
+                    << "NULL" << "-"
+                    << "NULL" << "-"
+                    << bitset<5>(rd) << "-"
+                    << "NULL" << "-"
+                    << "NULL" << "-"
+                    << bitset<20>(imm_31_12);
             break;
         }
         case UJ_TYPE: {
@@ -494,20 +494,20 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
             uint32_t imm_20 = (machineCode >> 31) & 0x1;
             uint32_t imm = (imm_20 << 20) | (imm_19_12 << 12) | (imm_11 << 11) | (imm_10_1 << 1);
             
-            comment = bitset<7>(opcode) + "-"
-                    + "NULL" + "-"
-                    + "NULL" + "-"
-                    + bitset<5>(rd) + "-"
-                    + "NULL" + "-"
-                    + "NULL" + "-"
-                    + bitset<21>(imm);
+            comment << bitset<7>(opcode) << "-"
+                    << "NULL" << "-"
+                    << "NULL" << "-"
+                    << bitset<5>(rd) << "-"
+                    << "NULL" << "-"
+                    << "NULL" << "-"
+                    << bitset<21>(imm);
             break;
         }
         default:
-            comment = "Unknown instruction type";
+            comment <<"Unknown instruction type";
     }
    
-    return comment;
+    return comment.str();
 }
 
 string formatOutputLine(uint32_t address, uint32_t machineCode, const Instruction& instr, const string& encodingComment) {
@@ -522,5 +522,5 @@ string formatOutputLine(uint32_t address, uint32_t machineCode, const Instructio
         }
     }
     line += " # " + encodingComment;
-    return line.str();
+    return line;
 }

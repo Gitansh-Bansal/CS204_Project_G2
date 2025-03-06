@@ -142,7 +142,7 @@ vector<Instruction> parseFile(const string& filename) {
     }
 
     string line;
-    int lineNumber = 0;
+    int lineNumber = 1;
 
     while(getline(file, line)) {
         Instruction instr = parseLine(line, lineNumber);
