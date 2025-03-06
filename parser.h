@@ -34,5 +34,6 @@ vector<Instruction> parseFile(const string& filename);
 string trimString(const string& str);
 vector<string> splitString(const string& str, char delimiter);
 string removeComments(const string& line);
+string refine(const string& line);
 
 #endif 
