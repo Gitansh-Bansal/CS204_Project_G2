@@ -387,19 +387,19 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
 uint32_t encodeInstruction(const Instruction& instr, uint32_t address, const SymbolTable& symbolTable) {
     switch (instr.type) {
         case R_TYPE:
-            return encodeRType(instr);
+            return encodeR(instr);
         case I_TYPE:
-            return encodeIType(instr, address, symbolTable);
+            return encodeI(instr, address, symbolTable);
         case S_TYPE:
-            return encodeSType(instr, address, symbolTable);
+            return encodeS(instr, address, symbolTable);
         case SB_TYPE:
-            return encodeSBType(instr, address, symbolTable);
+            return encodeSB(instr, address, symbolTable);
         case U_TYPE:
-            return encodeUType(instr, address, symbolTable);
+            return encodeU(instr, address, symbolTable);
         case UJ_TYPE:
-            return encodeUJType(instr, address, symbolTable);
+            return encodeUJ(instr, address, symbolTable);
         default:
-            std::cerr << "Error: Unknown instruction type at line " << instr.lineNumber << std::endl;
+            cerr << "Error: Unknown instruction type at line " << instr.lineNumber << endl;
             return 0;
     }
 }
