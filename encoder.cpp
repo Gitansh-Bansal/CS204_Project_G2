@@ -140,9 +140,7 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
     uint32_t imm_4_0 = imm & 0x1F;
     
     return (imm_11_5 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_4_0 << 7) | opcode;
-
 }
-uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
 
 
 uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable){
@@ -181,7 +179,31 @@ uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& sy
 }
 
 
-uint32_t encodeU(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
+uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& symbolTable) {
+    uint32_t opcode = opcodeMap.at(instr.opcode);
+    
+    int32_t rd = parseRegister(instr.operands[0]);
+
+    if (rd < 0) {
+        cerr << "Error: Invalid register in U-type instruction at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
+    int32_t imm;
+    
+    if (symbolTable.hasSymbol(instr.operands[1])) {
+        imm = symbolTable.getSymbolAddress(instr.operands[1]);
+    } else {
+        imm = parseImmediate(instr.operands[1]);
+    }
+    
+    uint32_t imm_31_12 = imm & 0xFFFFF;     // 20 bits of immediate, in case its bigger
+    
+    uint32_t encodedInstr =  (imm_31_12 << 12) | (rd << 7) | opcode;
+    return encodedInstr;
+}
+
+
 uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
 
 vector<uint8_t> encodeDirective(const Instruction& instr);
