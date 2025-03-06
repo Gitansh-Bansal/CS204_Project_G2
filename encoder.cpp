@@ -378,7 +378,7 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
         for (char c : str) {
             data.push_back(static_cast<uint8_t>(c));
         }
-        data.push_back(0);        // null terminator
+        data.push_back(0);       
     }
     
     return data;
@@ -519,3 +519,17 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
     return comment;
 }
 
+string formatOutputLine(uint32_t address, uint32_t machineCode, const Instruction& instr, const string& encodingComment) {
+    string line;
+    line += intToHex(address) + " " + intToHex(machineCode) + " , ";
+    line += instr.opcode + " ";
+    
+    for (size_t i=0; i<instr.operands.size(); i++) {
+        line+=instr.operands[i];
+        if (i<instr.operands.size() - 1) {
+            line += ",";
+        }
+    }
+    line += " # " + encodingComment;
+    return line.str();
+}
