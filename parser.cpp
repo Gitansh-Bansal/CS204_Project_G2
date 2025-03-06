@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <unordered_map>  
 #include <regex>          // for handling instruction format
-
 using namespace std;
 
 static unordered_map<string, InstructionType> instructionTypeMap = {
@@ -78,15 +77,17 @@ string removeComments(const string& line){          // remove comments from line
     return line;
 }      
 
-string removeCommas(const string& line){               // remove commas from line
+string refine(const string& line){               // remove commas from line
     string res=line;
-    std::replace(res.begin(), res.end(), ',', ' ');
+    replace(res.begin(), res.end(), ',', ' ');
+    replace(res.begin(), res.end(), '(', ' ');
+    replace(res.begin(), res.end(), ')', ' ');
     return res;
 }
 
 Instruction parseLine(const string& rawline, int lineNumber) {
     Instruction instruction;
-    string line=removeCommas(rawline);
+    string line=refine(rawline);
     string line1=removeComments(rawline);
     instruction.lineNumber = lineNumber;
     instruction.hasLabel = false;
