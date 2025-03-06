@@ -1,6 +1,7 @@
 #include <string>
 #include <cstdint>
 #include <vector>
+#include "encoder.h"
 using namespace std;
 
 static const unordered_map<string, uint32_t> opcodeMap = {
@@ -155,6 +156,11 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
         }
     }
     
+    if (imm < -2048 || imm > 2047) {
+        cerr << "Error: Immediate value out of range [-2048, 2047] at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
     if (rd < 0 || rs1 < 0) {
         cerr << "Error: Invalid register in I-type instruction at line " << instr.lineNumber << endl;
         return 0;
@@ -184,6 +190,12 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
         return 0;
     }
 
+    if (imm < -2048 || imm > 2047) {
+        cerr << "Error: Immediate value out of range [-2048, 2047] at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
+    // Split immediate into two parts for S-type encoding
     uint32_t imm_11_5 = (imm >> 5) & 0x7F;
     uint32_t imm_4_0 = imm & 0x1F;
     
@@ -243,7 +255,12 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
     } else {
         imm = parseImmediate(instr.operands[1],instr.lineNumber);
     }
-    
+
+    if (imm < -1048576 || imm > 1048574) {  // Range of a signed 21-bit immediate [-2^20, 2^20 - 2]
+        cerr << "Error: Immediate value out of range [-1048576, 1048574] at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
     uint32_t imm_31_12 = imm & 0xFFFFF;     // 20 bits of immediate, in case its bigger
     
     uint32_t encodedInstr =  (imm_31_12 << 12) | (rd << 7) | opcode;
@@ -276,6 +293,11 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
     // Check if offset is in range and aligned
     if (offset % 2 != 0 || offset > 1048575 || offset < -1048576) {
         cerr << "Error: Jump offset out of range at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
+    if (imm < -1048576 || imm > 1048574) {  // Range of a signed 21-bit immediate [-2^20, 2^20 - 2]
+        cerr << "Error: Immediate value out of range [-1048576, 1048574] at line " << instr.lineNumber << endl;
         return 0;
     }
 
