@@ -70,10 +70,27 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
         return 0;
     }
 
-    // jalr instruction or load instructions (lb, lh, lw, ld)
-    if (instr.opcode == "jalr" || instr.opcode == "lb" || instr.opcode == "lh" || instr.opcode == "lw" || instr.opcode == "ld") {
+    // jalr instruction
+    if (instr.opcode == "jalr") {
         rd = parseRegister(instr.operands[0]);
-        imm = parseRegister(instr.operands[1]);
+        if (parseRegister(instr.operands[1])!= -1) {
+            rs1 = parseRegister(instr.operands[1]);
+            imm = parseImmediate(instr.operands[2]);
+        }
+        else if (parseRegister(instr.operands[2])!= -1) {
+            rs1 = parseRegister(instr.operands[2]);
+            imm = parseImmediate(instr.operands[1]);
+        }
+        else {
+            cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+            return 0;
+        }
+    } 
+
+    // load instructions (lb, lh, lw, ld)
+    else if (instr.opcode == "lb" || instr.opcode == "lh" || instr.opcode == "lw" || instr.opcode == "ld") {
+        rd = parseRegister(instr.operands[0]);
+        imm = parseImmediate(instr.operands[1]);
         rs1 = parseRegister(instr.operands[2]);
     } 
 
