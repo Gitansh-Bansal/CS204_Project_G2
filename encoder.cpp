@@ -90,9 +90,6 @@ string intToHex(uint32_t value) {
     return ss.str();
 }
 
-
-uint32_t encodeInstruction(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
-
 uint32_t encodeR(const Instruction& instr) {
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
@@ -200,7 +197,6 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
         return 0;
     }
 
-    // Split immediate into two parts for S-type encoding
     uint32_t imm_11_5 = (imm >> 5) & 0x7F;
     uint32_t imm_4_0 = imm & 0x1F;
     
@@ -271,12 +267,12 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
         imm = parseImmediate(instr.operands[1],instr.lineNumber);
     }
 
-    if (imm < -1048576 || imm > 1048574) {  // Range of a signed 21-bit immediate [-2^20, 2^20 - 2]
+    if (imm < -1048576 || imm > 1048574) { 
         cerr << "Error: Immediate value out of range [-1048576, 1048574] at line " << instr.lineNumber << endl;
         return 0;
     }
 
-    uint32_t imm_31_12 = imm & 0xFFFFF;     // 20 bits of immediate, in case its bigger
+    uint32_t imm_31_12 = imm & 0xFFFFF; 
     
     uint32_t encodedInstr =  (imm_31_12 << 12) | (rd << 7) | opcode;
     return encodedInstr;
@@ -294,7 +290,6 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
 
     int32_t rd = parseRegister(instr.operands[0],instr.lineNumber);
 
-    // Get target label address
     int32_t targetAddress;
     if (symbolTable.hasSymbol(instr.operands[1])) {
         targetAddress = symbolTable.getSymbolAddress(instr.operands[1]);
@@ -303,7 +298,6 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
         return 0;
     }
 
-    // Calculate jump offset (relative to PC)
     int32_t offset = targetAddress - address;
     
     if (rd < 0) {
@@ -311,18 +305,16 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
         return 0;
     }
 
-    // Check if offset is in range and aligned
     if (offset % 2 != 0 || offset > 1048575 || offset < -1048576) {
         cerr << "Error: Jump offset out of range at line " << instr.lineNumber << endl;
         return 0;
     }
 
-    if (imm < -1048576 || imm > 1048574) {  // Range of a signed 21-bit immediate [-2^20, 2^20 - 2]
+    if (imm < -1048576 || imm > 1048574) {  
         cerr << "Error: Immediate value out of range [-1048576, 1048574] at line " << instr.lineNumber << endl;
         return 0;
     }
 
-    // Extract bits for UJ encoding
     uint32_t imm_20 = (offset >> 20) & 0x1;
     uint32_t imm_19_12 = (offset >> 12) & 0xFF;
     uint32_t imm_11 = (offset >> 11) & 0x1;
@@ -407,7 +399,6 @@ uint32_t encodeInstruction(const Instruction& instr, uint32_t address, const Sym
 string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
     string comment="";
     
-    // Extract fields based on instruction type
     switch (instr.type) {
         case R_TYPE: {
             uint32_t opcode = machineCode & 0x7F;
@@ -520,7 +511,7 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
 }
 
 string formatOutputLine(uint32_t address, uint32_t machineCode, const Instruction& instr, const string& encodingComment) {
-    string line;
+    string line="";
     line += intToHex(address) + " " + intToHex(machineCode) + " , ";
     line += instr.opcode + " ";
     
