@@ -403,3 +403,119 @@ uint32_t encodeInstruction(const Instruction& instr, uint32_t address, const Sym
             return 0;
     }
 }
+
+string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
+    string comment="";
+    
+    // Extract fields based on instruction type
+    switch (instr.type) {
+        case R_TYPE: {
+            uint32_t opcode = machineCode & 0x7F;
+            uint32_t rd = (machineCode >> 7) & 0x1F;
+            uint32_t funct3 = (machineCode >> 12) & 0x7;
+            uint32_t rs1 = (machineCode >> 15) & 0x1F;
+            uint32_t rs2 = (machineCode >> 20) & 0x1F;
+            uint32_t funct7 = (machineCode >> 25) & 0x7F;
+            
+            comment = bitset<7>(opcode) + "-"
+                    + bitset<3>(funct3) + "-"
+                    + bitset<7>(funct7) + "-"
+                    + bitset<5>(rd) + "-"
+                    + bitset<5>(rs1) + "-"
+                    + bitset<5>(rs2) + "-"
+                    + "NULL";
+            break;
+        }
+        case I_TYPE: {
+            uint32_t opcode = machineCode & 0x7F;
+            uint32_t rd = (machineCode >> 7) & 0x1F;
+            uint32_t funct3 = (machineCode >> 12) & 0x7;
+            uint32_t rs1 = (machineCode >> 15) & 0x1F;
+            uint32_t imm = (machineCode >> 20) & 0xFFF;
+            
+            comment = bitset<7>(opcode) + "-"
+                    + bitset<3>(funct3) + "-"
+                    + "NULL" + "-"
+                    + bitset<5>(rd) + "-"
+                    + bitset<5>(rs1) + "-"
+                    + bitset<12>(imm);
+            break;
+        }
+        case S_TYPE: {
+            uint32_t opcode = machineCode & 0x7F;
+            uint32_t imm_4_0 = (machineCode >> 7) & 0x1F;
+            uint32_t funct3 = (machineCode >> 12) & 0x7;
+            uint32_t rs1 = (machineCode >> 15) & 0x1F;
+            uint32_t rs2 = (machineCode >> 20) & 0x1F;
+            uint32_t imm_11_5 = (machineCode >> 25) & 0x7F;
+            uint32_t imm = (imm_11_5 << 5) | imm_4_0;
+            
+            comment = bitset<7>(opcode) + "-"
+                    + bitset<3>(funct3) + "-"
+                    + "NULL" + "-"
+                    + "NULL" + "-"
+                    + bitset<5>(rs1) + "-"
+                    + bitset<5>(rs2) + "-"
+                    + bitset<12>(imm);
+            break;
+        }
+        case SB_TYPE: {
+            uint32_t opcode = machineCode & 0x7F;
+            uint32_t imm_11 = (machineCode >> 7) & 0x1;
+            uint32_t imm_4_1 = (machineCode >> 8) & 0xF;
+            uint32_t funct3 = (machineCode >> 12) & 0x7;
+            uint32_t rs1 = (machineCode >> 15) & 0x1F;
+            uint32_t rs2 = (machineCode >> 20) & 0x1F;
+            uint32_t imm_10_5 = (machineCode >> 25) & 0x3F;
+            uint32_t imm_12 = (machineCode >> 31) & 0x1;
+            
+            uint32_t imm = (imm_12 << 12) | (imm_11 << 11) | (imm_10_5 << 5) | (imm_4_1 << 1);
+            
+            comment = bitset<7>(opcode) + "-"
+                    + bitset<3>(funct3) + "-"
+                    + "NULL" + "-"
+                    + "NULL" + "-"
+                    + bitset<5>(rs1) + "-"
+                    + bitset<5>(rs2) + "-"
+                    + bitset<13>(imm);
+            break;
+        }
+        case U_TYPE: {
+            uint32_t opcode = machineCode & 0x7F;
+            uint32_t rd = (machineCode >> 7) & 0x1F;
+            uint32_t imm_31_12 = (machineCode >> 12) & 0xFFFFF;
+            
+            comment = bitset<7>(opcode) + "-"
+                    + "NULL" + "-"
+                    + "NULL" + "-"
+                    + bitset<5>(rd) + "-"
+                    + "NULL" + "-"
+                    + "NULL" + "-"
+                    + bitset<20>(imm_31_12);
+            break;
+        }
+        case UJ_TYPE: {
+            uint32_t opcode = machineCode & 0x7F;
+            uint32_t rd = (machineCode >> 7) & 0x1F;
+            uint32_t imm_19_12 = (machineCode >> 12) & 0xFF;
+            uint32_t imm_11 = (machineCode >> 20) & 0x1;
+            uint32_t imm_10_1 = (machineCode >> 21) & 0x3FF;
+            uint32_t imm_20 = (machineCode >> 31) & 0x1;
+            uint32_t imm = (imm_20 << 20) | (imm_19_12 << 12) | (imm_11 << 11) | (imm_10_1 << 1);
+            
+            comment = bitset<7>(opcode) + "-"
+                    + "NULL" + "-"
+                    + "NULL" + "-"
+                    + bitset<5>(rd) + "-"
+                    + "NULL" + "-"
+                    + "NULL" + "-"
+                    + bitset<21>(imm);
+            break;
+        }
+        default:
+            comment = "Unknown instruction type";
+    }
+   
+    return comment;
+}
+
