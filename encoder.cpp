@@ -60,11 +60,45 @@ uint32_t encodeR(const Instruction& instr) {
     return (funct7 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode;
 }
 
-uint32_t encodeI(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
-uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
-{
+uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& symbolTable) {
+    uint32_t opcode = opcodeMap.at(instr.opcode);
+    uint32_t funct3 = funct3Map.at(instr.opcode);
+    int32_t rd, rs1, imm;
 
+    if (instr.operands.size() < 3) {
+        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
+    // jalr instruction or load instructions (lb, lh, lw, ld)
+    if (instr.opcode == "jalr" || instr.opcode == "lb" || instr.opcode == "lh" || instr.opcode == "lw" || instr.opcode == "ld") {
+        rd = parseRegister(instr.operands[0]);
+        imm = parseRegister(instr.operands[1]);
+        rs1 = parseRegister(instr.operands[2]);
+    } 
+
+    // other I-type
+    else {
+        rd = parseRegister(instr.operands[0]);
+        rs1 = parseRegister(instr.operands[1]);
+        
+        if (symbolTable.hasSymbol(instr.operands[2])) {
+            imm = symbolTable.getSymbolAddress(instr.operands[2]);
+        } else {
+            imm = parseImmediate(instr.operands[2]);
+        }
+    }
+    
+    if (rd < 0 || rs1 < 0) {
+        cerr << "Error: Invalid register in I-type instruction at line " << instr.lineNumber << endl;
+        return 0;
+    }
+    
+    uint32_t encodedInstr =  (imm << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode;
+    return encodedInstr;
 }
+
+uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
 uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
 uint32_t encodeU(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
 uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
