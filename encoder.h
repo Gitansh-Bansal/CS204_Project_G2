@@ -19,5 +19,11 @@ uint32_t encodeU(const Instruction& instr, uint32_t addr, const SymbolTable& sym
 uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
 
 vector<uint8_t> encodeDirective(const Instruction& instr);
+string generateEncodingComment(const Instruction& instr, uint32_t machineCode);
+string formatOutputLine(uint32_t addr, uint32_t machineCode, const Instruction& instr, const string& encodingComment);
+
+int32_t parseRegister(const string& reg);
+int32_t parseImmediate(const string& imm);
+string intToHex(uint32_t value);
 
 #endif
