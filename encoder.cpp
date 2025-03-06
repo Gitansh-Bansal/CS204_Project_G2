@@ -97,6 +97,11 @@ uint32_t encodeR(const Instruction& instr) {
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     uint32_t funct7 = funct7Map.at(instr.opcode);
+
+    if (instr.operands.size() < 3) {
+        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+        return 0;
+    }
     
     int32_t rd = parseRegister(instr.operands[0]);
     int32_t rs1 = parseRegister(instr.operands[1]);
@@ -206,6 +211,11 @@ uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& sy
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     
+    if (instr.operands.size() < 3) {
+        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+        return 0;
+    }
+    
     int32_t rs1 = parseRegister(instr.operands[0]);
     int32_t rs2 = parseRegister(instr.operands[1]);
     
@@ -240,6 +250,11 @@ uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& sy
 
 uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& symbolTable) {
     uint32_t opcode = opcodeMap.at(instr.opcode);
+
+    if (instr.operands.size() < 2) {
+        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+        return 0;
+    }
     
     int32_t rd = parseRegister(instr.operands[0]);
 
@@ -271,6 +286,12 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
 uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable);
 {
     uint32_t opcode = opcodeMap.at(instr.opcode);
+
+    if (instr.operands.size() < 3) {
+        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
+        return 0;
+    }
+
     int32_t rd = parseRegister(instr.operands[0],instr.lineNumber);
 
     // Get target label address
