@@ -85,7 +85,7 @@ int32_t parseImmediate(const string& imm, const int& linenum) {
         }
         return stoi(imm);
     } catch (const exception&) {
-        cerr << "Error: Invalid immediate value at line " << linenum << endl;
+        cerr << "Error: Invalid immediate value "<<imm<<" at line " << linenum << endl;
         return 0;
     }
 }
@@ -100,7 +100,7 @@ int64_t Immediate_64(const string& imm, const int& linenum) {
         }
         return stoll(imm);
     } catch (const exception&) {
-        cerr << "Error: Invalid immediate value at line " << linenum << endl;
+        cerr << "Error: Invalid immediate value "<<imm<<" at line " << linenum << endl;
         return 0;
     }
 }
@@ -139,7 +139,7 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
     int32_t rd, rs1, imm;
 
     if (instr.operands.size() < 3) {
-        cerr << "Error: Invalid I-type instruction format at " << instr.lineNumber << endl;
+        cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
 
