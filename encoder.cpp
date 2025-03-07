@@ -90,6 +90,21 @@ int32_t parseImmediate(const string& imm, const int& linenum) {
     }
 }
 
+int64_t Immediate_64(const string& imm, const int& linenum) {
+    try {
+        if (imm.size() > 2 && imm.substr(0, 2) == "0x") {
+            return stoll(imm.substr(2), nullptr, 16);
+        } 
+        if (imm.size() > 2 && imm.substr(0, 2) == "0b") {
+            return stoll(imm.substr(2), nullptr, 2);
+        }
+        return stoll(imm);
+    } catch (const exception&) {
+        cerr << "Error: Invalid immediate value at line " << linenum << endl;
+        return 0;
+    }
+}
+
 string intToHex(uint32_t value) {
     stringstream ss;
     ss << "0x" << hex << setw(8) << setfill('0') << value;
@@ -354,7 +369,7 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
         }
     } else if (instr.opcode == ".dword") {
         for (const auto& operand : instr.operands) {
-            int32_t value = parseImmediate(operand, instr.lineNumber);
+            int64_t value = Immediate_64(operand, instr.lineNumber);
             if (value > 0xFFFFFFFFFFFFFFFF || value < -0x8000000000000000) cerr << "Error: Too big entry "<< value << " to fit in double word at line " << instr.lineNumber<< endl;
 
             for (int i = 0; i < 8; i++) {
