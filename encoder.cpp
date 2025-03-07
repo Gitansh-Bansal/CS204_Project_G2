@@ -360,7 +360,7 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     } else if (instr.opcode == ".word") {
         for (const auto& operand : instr.operands) {
             int32_t value = parseImmediate(operand, instr.lineNumber);
-            if (value > 0xFFFFFFFF || value < -0x80000000) cerr << "Error: Too big entry "<< value << " to fit in word at line " << instr.lineNumber<< endl;
+            if (value > numeric_limits<int32_t>::max() || value < numeric_limits<int32_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in word at line " << instr.lineNumber<< endl;
 
             data.push_back(static_cast<uint8_t>(value & 0xFF));
             data.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
@@ -370,7 +370,7 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     } else if (instr.opcode == ".dword") {
         for (const auto& operand : instr.operands) {
             int64_t value = Immediate_64(operand, instr.lineNumber);
-            if (value > 0xFFFFFFFFFFFFFFFF || value < -0x8000000000000000) cerr << "Error: Too big entry "<< value << " to fit in double word at line " << instr.lineNumber<< endl;
+            if (value > numeric_limits<int64_t>::max() || value < numeric_limits<int64_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in double word at line " << instr.lineNumber<< endl;
 
             for (int i = 0; i < 8; i++) {
                 data.push_back(static_cast<uint8_t>((value >> (i * 8)) & 0xFF));
@@ -483,7 +483,7 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
                     << "NULL" << "-"
                     << bitset<5>(rs1) << "-"
                     << bitset<5>(rs2) << "-"
-                    << bitset<13>(imm);
+                    << bitset<12>(imm>>1);
             break;
         }
         case U_TYPE: {
@@ -515,7 +515,7 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
                     << bitset<5>(rd) << "-"
                     << "NULL" << "-"
                     << "NULL" << "-"
-                    << bitset<21>(imm);
+                    << bitset<20>(imm>>1);
             break;
         }
         default:
