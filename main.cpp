@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <vector>
 #include "parser.h"
 #include "encoder.h"
@@ -109,7 +110,7 @@ int main() {
                     }
                     
                     char buffer[3];             // buffer to store hex representation
-                    sprintf(buffer, "%02X", static_cast<int>(data[i]));
+                    snprintf(buffer, sizeof(buffer), "%02X", static_cast<int>(data[i]));
                     outFile << buffer << " ";
                 }
                 
