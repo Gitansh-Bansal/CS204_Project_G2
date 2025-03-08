@@ -10,12 +10,10 @@
 int main() {
     string inputFile = "test1.asm";
     string outputFile = "output.mc";
-
     SymbolTable symbolTable;
 
     // first pass
-    cout << "First pass : Building symbol table..." << endl;
-
+    cout << "\nFirst pass : Building symbol table..." << endl;
 
     vector<Instruction> instructions = parseFile(inputFile);
     if (instructions.empty()) {
@@ -65,10 +63,11 @@ int main() {
         }
     }
 
-    // symbolTable.printSymbolTable();
+    cout<<endl;
+    symbolTable.printSymbolTable();
 
     // second pass
-    cout << "Second pass : Generating machine code..." << endl;
+    cout << "\nSecond pass : Generating machine code..." << endl;
 
     symbolTable.resetCursors();
     symbolTable.setCurrentSegment(TEXT);
@@ -91,8 +90,7 @@ int main() {
                 symbolTable.setCurrentSegment(DATA);
                 currentAddress = symbolTable.getCurrentAddress();
                 vector<uint8_t> data = encodeDirective(instr);
-                
-                // // write data bytes to output
+            
                 // for (size_t i = 0; i < data.size(); i++) {
                 //     if (i % 4 == 0) {
                 //         // Start a new line for each word
@@ -109,7 +107,7 @@ int main() {
                         outFile << intToHex(currentAddress + i) << " ";
                     }
                     
-                    char buffer[3];             // buffer to store hex representation
+                    char buffer[3];            
                     snprintf(buffer, sizeof(buffer), "%02X", static_cast<int>(data[i]));
                     outFile << buffer << " ";
                 }
@@ -123,23 +121,21 @@ int main() {
                 
                 symbolTable.incrementAddress(data.size());
             }
-        } else if (instr.type != LABEL && instr.type != UNKNOWN) {
+        } 
+        else if (instr.type != LABEL && instr.type != UNKNOWN) {
             symbolTable.setCurrentSegment(TEXT);
+
             currentAddress = symbolTable.getCurrentAddress();
-            
             uint32_t machineCode = encodeInstruction(instr, currentAddress, symbolTable);
-            
             string encodingComment = generateEncodingComment(instr, machineCode);
-            
+
             string outputLine = formatOutputLine(currentAddress, machineCode, instr, encodingComment);
             outFile << outputLine << endl;
             
             symbolTable.incrementAddress(4);
         }
     }
-
     outFile.close();
-
-    cout << "Output successfully written to " << outputFile << endl;
+    cout << "Output successfully written to " << outputFile << endl << endl;
     return 0;
 }
