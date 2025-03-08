@@ -345,15 +345,15 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     if (instr.opcode == ".byte") {
         for (const auto& operand : instr.operands) {
             int32_t value = parseImmediate(operand, instr.lineNumber);
-            auto val1 = value & 0xFF;
-            if (value != val1) cerr << "Error: Too big entry "<< value << " to fit in byte at line " << instr.lineNumber<< endl;
+            if (value > numeric_limits<int8_t>::max() || value < numeric_limits<int8_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in byte at line " << instr.lineNumber<< endl;
             
-            data.push_back(static_cast<uint8_t>(val1));
+            data.push_back(static_cast<uint8_t>(value & 0xFF));
         }
     } else if (instr.opcode == ".half") {
         for (const auto& operand : instr.operands) {
             int32_t value = parseImmediate(operand, instr.lineNumber); 
-            if (value >> 16 != 0) cerr << "Error: Too big entry "<< value << " to fit in half word at line " << instr.lineNumber<< endl;
+            if (value > numeric_limits<int16_t>::max() || value < numeric_limits<int16_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in half word at line " << instr.lineNumber<< endl;
+
             
             data.push_back(static_cast<uint8_t>(value & 0xFF));
             data.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
