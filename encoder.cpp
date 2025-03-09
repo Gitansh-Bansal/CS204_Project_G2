@@ -490,9 +490,14 @@ uint32_t encodeInstruction(const Instruction& instr, uint32_t address, const Sym
 
 //function to generate encoding comment
 string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
+
+    //stringstream to store comment
     stringstream comment;
-    
+
+    //switch case to generate comment based on instruction type
     switch (instr.type) {
+
+        //R type instruction
         case R_TYPE: {
             uint32_t opcode = machineCode & 0x7F;
             uint32_t rd = (machineCode >> 7) & 0x1F;
@@ -510,6 +515,8 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
                     << "NULL";
             break;
         }
+
+        //I type instruction
         case I_TYPE: {
             uint32_t opcode = machineCode & 0x7F;
             uint32_t rd = (machineCode >> 7) & 0x1F;
@@ -525,6 +532,8 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
                     << bitset<12>(imm);
             break;
         }
+
+        //S type instruction
         case S_TYPE: {
             uint32_t opcode = machineCode & 0x7F;
             uint32_t imm_4_0 = (machineCode >> 7) & 0x1F;
@@ -543,6 +552,8 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
                     << bitset<12>(imm);
             break;
         }
+
+        //SB type instruction
         case SB_TYPE: {
             uint32_t opcode = machineCode & 0x7F;
             uint32_t imm_11 = (machineCode >> 7) & 0x1;
@@ -564,6 +575,8 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
                     << bitset<12>(imm>>1);
             break;
         }
+        
+        //U type instruction
         case U_TYPE: {
             uint32_t opcode = machineCode & 0x7F;
             uint32_t rd = (machineCode >> 7) & 0x1F;
@@ -578,6 +591,8 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
                     << bitset<20>(imm_31_12);
             break;
         }
+        
+        //UJ type instruction
         case UJ_TYPE: {
             uint32_t opcode = machineCode & 0x7F;
             uint32_t rd = (machineCode >> 7) & 0x1F;
@@ -596,6 +611,8 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
                     << bitset<20>(imm>>1);
             break;
         }
+
+        //default case
         default:
             comment <<"Unknown instruction type";
     }
@@ -603,17 +620,24 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
     return comment.str();
 }
 
+//function to format output line
 string formatOutputLine(uint32_t address, uint32_t machineCode, const Instruction& instr, const string& encodingComment) {
+
     string line="";
+
+    //adding address, machine code, opcode 
     line += intToHex(address) + " " + intToHex(machineCode) + " , ";
     line += instr.opcode + " ";
     
+    //adding operands
     for (size_t i=0; i<instr.operands.size(); i++) {
         line+=instr.operands[i];
         if (i<instr.operands.size() - 1) {
             line += ",";
         }
     }
+
+    //adding encoding comment
     line += " # " + encodingComment;
     return line;
 }
