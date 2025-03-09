@@ -1,5 +1,5 @@
 .data
-array : .byte -12 40 2 13 73 29 12 88 15 7
+array: .byte -12 40 2 13 73 29 12 88 15 7
 
 .text 
 lui x5, 0x10000     # x5 has the starting address
@@ -7,13 +7,13 @@ lui x6, 0x10000     # (to find) end address in x6
 lb x7, 0, x6        # x7 contains whatever at x6
 addi x8, x0, 0      # x8 will contain the length of the array
 
-findlen : beq x7, x0, lenfound
+L1: beq x7, x0, E1
 addi x8, x8, 1
 addi x6, x6, 1
 lb x7, 0, x6
-jal x0, findlen
+jal x0, L1
 
-lenfound:   addi x8, x8, -1
+E1: addi x8, x8, -1
 # now x8 contains the length of the array
 
 addi x6, x0, 0
@@ -23,25 +23,25 @@ add x30, x0, x8     # outer loop counter
 add x31, x0, x8     # inner loop counter
 
 
-outerloop : beq x30, x0, exit 
+L2: beq x30, x0, exit 
 add x31, x0, x8
 lui x6, 0x10000
-innerloop : beq x31, x0, outofinner
+L3: beq x31, x0, E2
 lb x10, 0, x6
 lb x11, 1, x6
-blt x11, x10, exchange10x11
-retn : addi x6, x6, 1
+blt x11, x10, E3
+R1: addi x6, x6, 1
 addi x31, x31, -1
-jal x0, innerloop
+jal x0, L3
 
-outofinner : addi x30, x0, -1
-jal x0, outerloop
+E2: addi x30, x0, -1
+jal x0, L2
 
-exchange10x11 : addi x28, x10, 0
+E3: addi x28, x10, 0
 addi x29, x11, 0
 sb x28, 1, x6
 sb x29, 0, x6
-jal x0, retn
+jal x0, R1
 
 exit:
 
