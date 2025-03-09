@@ -134,7 +134,7 @@ int main() {
         else if (instr.type == UNKNOWN && instr.opcode == "terminate") {
             symbolTable.setCurrentSegment(TEXT); // switch to the text segment
             currentAddress = symbolTable.getCurrentAddress(); // get the current address
-            uint32_t machineCode = 0; // generate the machine code for the instruction (done in encoder.cpp)
+            uint32_t machineCode = -1; // generate the machine code for the instruction (done in encoder.cpp)
             string encodingComment = "Terminate"; // generate the encoding comment for the instruction (done in encoder.cpp)
             outFile << formatOutputLine(currentAddress, machineCode, instr, encodingComment) << endl; // write the output line to the output file
             break;
