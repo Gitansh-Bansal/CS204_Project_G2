@@ -39,12 +39,12 @@ Adhering to the **RISC-V 32-bit Instruction Set Architecture (ISA)**, the assemb
 ## File Structure
 ```
 📂 Project Root  
-├── 📂 headers/            # Contains all header files  
+├── 📂 include/            # Contains all header files  
 │   ├── 📄 encoder.h       # Header file for instruction encoding  
 │   ├── 📄 parser.h        # Header file for instruction parsing  
 │   ├── 📄 symboltable.h   # Header file for symbol table management  
 │  
-├── 📂 source/             # Contains all source files  
+├── 📂 src/             # Contains all source files  
 │   ├── 📄 main.cpp        # Main program handling file processing and instruction encoding  
 │   ├── 📄 encoder.cpp     # Encodes instructions into machine code  
 │   ├── 📄 parser.cpp      # Parses assembly instructions and extracts components  
@@ -101,7 +101,7 @@ The program will give the following `.mc` file in Output:
 ### **To Compile:**
 Use **G++** to compile the assembler:
 ```sh
-g++ -o assembler main.cpp parser.cpp encoder.cpp symboltable.cpp
+g++ -o assembler src/*.cpp -I include
 ```
 
 ### **To Run:**
