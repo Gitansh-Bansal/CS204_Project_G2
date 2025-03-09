@@ -3,6 +3,8 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <iomanip>
+#include <algorithm>
 #include "parser.h"
 #include "encoder.h"
 #include "symboltable.h"
@@ -83,6 +85,16 @@ int main() {
         return 1;
     }
 
+    // instruction for termination
+    Instruction instr;
+    instr.type = UNKNOWN;
+    instr.opcode = "terminate";
+    instr.operands = {};
+    instr.label = "";
+    instr.hasLabel = false;
+    instr.lineNumber = 0;
+    instructions.push_back(instr);
+
     // now we go to each instruction, check its type and generate the machine code accordingly
     for (const auto& instr : instructions) {
         uint32_t currentAddress = symbolTable.getCurrentAddress(); // get the current address
@@ -99,24 +111,10 @@ int main() {
 
                 // write the data to the output file
                 for (size_t i = 0; i < data.size(); i++) { 
-                    if (i % 4 == 0) {
-                        if (i > 0) outFile << endl; // print a newline after every 4 bytes
-                        outFile << intToHex(currentAddress + i) << " "; // print the address
-                    }
-                    
-                    char buffer[3]; // buffer to store the hex value of the byte
-                    snprintf(buffer, sizeof(buffer), "%02X", static_cast<int>(data[i])); // convert the byte to hex
-                    outFile << buffer << " "; // print the hex value of the byte
+                    outFile << intToHex(currentAddress + i) << " 0x";
+                    outFile << hex << right <<setw(2) << setfill('0') << static_cast<int>(data[i]);
+                    outFile << endl;
                 }
-                
-                // print the type of directive and the data
-                outFile << " , " << instr.opcode;
-                for (size_t i = 0; i < instr.operands.size(); i++) {
-                    outFile << " " << instr.operands[i];
-                    if (i < instr.operands.size() - 1) outFile << ",";
-                }
-                outFile << endl;
-                
                 symbolTable.incrementAddress(data.size()); // increment the address of the data cursor
             }
         }
@@ -131,6 +129,14 @@ int main() {
             outFile << outputLine << endl; // write the output line to the output file
             
             symbolTable.incrementAddress(4); // increment the address of the text cursor
+        }
+        else if (instr.type == UNKNOWN && instr.opcode == "terminate") {
+            symbolTable.setCurrentSegment(TEXT); // switch to the text segment
+            currentAddress = symbolTable.getCurrentAddress(); // get the current address
+            uint32_t machineCode = 0; // generate the machine code for the instruction (done in encoder.cpp)
+            string encodingComment = "Terminate"; // generate the encoding comment for the instruction (done in encoder.cpp)
+            outFile << formatOutputLine(currentAddress, machineCode, instr, encodingComment) << endl; // write the output line to the output file
+            break;
         }
     }
     outFile.close();
