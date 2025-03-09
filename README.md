@@ -103,7 +103,7 @@ The program will give the following `.mc` file in Output:
 ### **To Compile:**
 Use **G++** to compile the assembler in root directory:
 ```sh
-g++ -o assembler src/*.cpp -I include
+g++ -std=c++17 -o assembler src/*.cpp -I include
 ```
 
 ### **To Run:**
