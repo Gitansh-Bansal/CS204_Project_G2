@@ -1,3 +1,4 @@
+// including libraries and header files
 #include <string>
 #include <cstdint>
 #include <vector>
@@ -11,6 +12,7 @@
 #include "encoder.h"
 using namespace std;
 
+//unordered map for opcode
 static const unordered_map<string, uint32_t> opcodeMap = {
     // R-type
     {"add", 0x33}, {"sub", 0x33}, {"sll", 0x33}, {"slt", 0x33},
@@ -29,6 +31,7 @@ static const unordered_map<string, uint32_t> opcodeMap = {
     {"jal", 0x6F}
 };
 
+//unordered map for funct3
 static const unordered_map<string, uint32_t> funct3Map = {
     // R-type
     {"add", 0x0}, {"sub", 0x0}, {"sll", 0x1}, {"slt", 0x2},
@@ -43,12 +46,14 @@ static const unordered_map<string, uint32_t> funct3Map = {
     {"beq", 0x0}, {"bne", 0x1}, {"blt", 0x4}, {"bge", 0x5}
 };
 
+//unordered map for funct7
 static const unordered_map<string, uint32_t> funct7Map = {
     {"add", 0x00}, {"sub", 0x20}, {"sll", 0x00}, {"slt", 0x00},
     {"sra", 0x20}, {"srl", 0x00}, {"and", 0x00}, {"or", 0x00},
     {"xor", 0x00}, {"mul", 0x01}, {"div", 0x01}, {"rem", 0x01}
 };
 
+//function to parse register to integer
 int32_t parseRegister(const string& reg) {
     unordered_map <string, int> reg_map = {
         {"x0", 0}, {"x1", 1}, {"x2", 2}, {"x3", 3},
@@ -69,14 +74,20 @@ int32_t parseRegister(const string& reg) {
         {"s11", 27}, {"t3", 28}, {"t4", 29}, {"t5", 30},
         {"t6", 31}
     };
+
+    // check if register is empty
     if (reg.empty()) return -1;
+    // check if register is in the map
     if (reg_map.find(reg) != reg_map.end()) {
         return reg_map[reg];
     }
     return -1;
 }
 
+//function to parse immediate to integer
 int32_t parseImmediate(const string& imm, const int& linenum) {
+
+    //check if immediate is in hex , binary or decimal
     try {
         if (imm.size() > 2 && imm.substr(0, 2) == "0x") {
             return stoi(imm.substr(2), nullptr, 16);
@@ -85,13 +96,18 @@ int32_t parseImmediate(const string& imm, const int& linenum) {
             return stoi(imm.substr(2), nullptr, 2);
         }
         return stoi(imm);
-    } catch (const exception&) {
+    }
+    //catch exception if immediate is invalid
+    catch (const exception&) {
         cerr << "Error: Invalid immediate value "<<imm<<" at line " << linenum << endl;
         return 0;
     }
 }
 
+//function to parse immediate to 64 bit integer for double word
 int64_t Immediate_64(const string& imm, const int& linenum) {
+
+    //check if immediate is in hex , binary or decimal
     try {
         if (imm.size() > 2 && imm.substr(0, 2) == "0x") {
             return stoll(imm.substr(2), nullptr, 16);
@@ -100,45 +116,57 @@ int64_t Immediate_64(const string& imm, const int& linenum) {
             return stoll(imm.substr(2), nullptr, 2);
         }
         return stoll(imm);
-    } catch (const exception&) {
+    }
+    //catch exception if immediate is invalid
+    catch (const exception&) {
         cerr << "Error: Invalid immediate value "<<imm<<" at line " << linenum << endl;
         return 0;
     }
 }
 
+//function to convert integer to hex string
 string intToHex(uint32_t value) {
     stringstream ss;
     ss << "0x" << hex << setw(8) << setfill('0') << value;
     return ss.str();
 }
 
+
+//function to encode R type instructiosn
 uint32_t encodeR(const Instruction& instr) {
+
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     uint32_t funct7 = funct7Map.at(instr.opcode);
 
+    //check if operands are less than 3
     if (instr.operands.size() < 3) {
         cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
     
+    //parse operands to integer
     int32_t rd = parseRegister(instr.operands[0]);
     int32_t rs1 = parseRegister(instr.operands[1]);
     int32_t rs2 = parseRegister(instr.operands[2]);
     
+    //check if operands are valid
     if (rd < 0 || rs1 < 0 || rs2 < 0) {
         cerr << "Error: Invalid register in R-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
     
+    //returning encoded instruction
     return (funct7 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode;
 }
 
+//function to encode I type instructions
 uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& symbolTable) {
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     int32_t rd, rs1, imm;
 
+    //check if operands are less than 3
     if (instr.operands.size() < 3) {
         cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
         return 0;
@@ -180,62 +208,75 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
         }
     }
     
+    //check if immediate is in range
     if (imm < -2048 || imm > 2047) {
         cerr << "Error: Immediate value out of range [-2048, 2047] at line " << instr.lineNumber << endl;
         return 0;
     }
 
+    //check if registers are valid
     if (rd < 0 || rs1 < 0) {
         cerr << "Error: Invalid register in I-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
     
+    //returning encoded instruction
     uint32_t encodedInstr =  (imm << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode;
     return encodedInstr;
 }
 
+
+//function to encode S type instructions
 uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable){
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     int32_t rs1, rs2, imm;
 
+    //check if operands are less than 3
     if (instr.operands.size() < 3) {
         cerr << "Error: Invalid S-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
 
+    //parse operands to integer
     rs2 = parseRegister(instr.operands[0]);
     imm = parseImmediate(instr.operands[1],instr.lineNumber);
     rs1 = parseRegister(instr.operands[2]);
     
+    //check if operands are valid
     if (rs1 < 0 || rs2 < 0) {
         cerr << "Error: Invalid register in S-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
 
+    //check if immediate is in range
     if (imm < -2048 || imm > 2047) {
         cerr << "Error: Immediate value out of range [-2048, 2047] at line " << instr.lineNumber << endl;
         return 0;
     }
 
+    //returning encoded instruction
     uint32_t imm_11_5 = (imm >> 5) & 0x7F;
     uint32_t imm_4_0 = imm & 0x1F;
-    
     return (imm_11_5 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_4_0 << 7) | opcode;
 }
 
+//function to encode SB type instructions
 uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable){
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     
+    //check if operands are less than 3
     if (instr.operands.size() < 3) {
         cerr << "Error: Invalid SB-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
-    
+
+    //parse operands to integer
     int32_t rs1 = parseRegister(instr.operands[0]);
     int32_t rs2 = parseRegister(instr.operands[1]);
     
+    //checking if label is in symbol table
     int32_t labelAddress;
     if (symbolTable.hasSymbol(instr.operands[2])) {
         labelAddress = symbolTable.getSymbolAddress(instr.operands[2]);
@@ -244,30 +285,34 @@ uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& sy
         return 0;
     }
     
+    //calculating offset
     int32_t offset = labelAddress - addr;
     
+    //check if registers are valid
     if (rs1 < 0 || rs2 < 0) {
         cerr << "Error: Invalid register in SB-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
     
+    //check if offset is in range
     if (offset % 2 != 0 || offset > 4095 || offset < -4096) {
         cerr << "Error: Branch offset out of range at line " << instr.lineNumber << endl;
         return 0;
     }
-    
+      
+    //returning encoded instruction
     uint32_t imm_12 = (offset >> 12) & 0x1;
     uint32_t imm_11 = (offset >> 11) & 0x1;
     uint32_t imm_10_5 = (offset >> 5) & 0x3F;
     uint32_t imm_4_1 = (offset >> 1) & 0xF;
-    
     return (imm_12 << 31) | (imm_10_5 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_4_1 << 8) | (imm_11 << 7) | opcode;
 }
 
-
+//function to encode U type instructions
 uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& symbolTable) {
     uint32_t opcode = opcodeMap.at(instr.opcode);
 
+    //check if operands are less than 2
     if (instr.operands.size() < 2) {
         cerr << "Error: Invalid U-type instruction format at line " << instr.lineNumber << endl;
         return 0;
@@ -275,34 +320,37 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
     
     int32_t rd = parseRegister(instr.operands[0]);
 
+    //check if register is valid
     if (rd < 0) {
         cerr << "Error: Invalid register in U-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
 
+    //parse immediate to integer
     int32_t imm;
-    
     if (symbolTable.hasSymbol(instr.operands[1])) {
         imm = symbolTable.getSymbolAddress(instr.operands[1]);
     } else {
         imm = parseImmediate(instr.operands[1],instr.lineNumber);
     }
 
+    //check if immediate is in range
     if (imm < -1048576 || imm > 1048574) { 
         cerr << "Error: Immediate value out of range [-1048576, 1048574] at line " << instr.lineNumber << endl;
         return 0;
     }
 
+    //returning encoded instruction
     uint32_t imm_31_12 = imm & 0xFFFFF; 
-    
     uint32_t encodedInstr =  (imm_31_12 << 12) | (rd << 7) | opcode;
     return encodedInstr;
 }
 
-
+//function to encode UJ type instructions
 uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable){
     uint32_t opcode = opcodeMap.at(instr.opcode);
 
+    //check if operands are less than 2
     if (instr.operands.size() < 2) {
         cerr << "Error: Invalid UJ-type instruction format at line " << instr.lineNumber << endl;
         return 0;
@@ -310,6 +358,7 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
 
     int32_t rd = parseRegister(instr.operands[0]);
 
+    //checking if label is in symbol table
     int32_t targetAddress;
     if (symbolTable.hasSymbol(instr.operands[1])) {
         targetAddress = symbolTable.getSymbolAddress(instr.operands[1]);
@@ -317,20 +366,22 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
         cerr << "Error: Undefined label in jump instruction at line " << instr.lineNumber << endl;
         return 0;
     }
-
+    //calculating offset
     int32_t offset = targetAddress - addr;
     
+    //check if register is valid
     if (rd < 0) {
         cerr << "Error: Invalid register in UJ-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
 
+    //check if offset is in range
     if (offset % 2 != 0 || offset > 1048575 || offset < -1048576) {
         cerr << "Error: Jump offset out of range at line " << instr.lineNumber << endl;
         return 0;
     }
 
-
+    //returning encoded instruction
     uint32_t imm_20 = (offset >> 20) & 0x1;
     uint32_t imm_19_12 = (offset >> 12) & 0xFF;
     uint32_t imm_11 = (offset >> 11) & 0x1;
@@ -339,60 +390,85 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
 
 }
 
+//function to encode directives
 vector<uint8_t> encodeDirective(const Instruction& instr) {
+
+    //vector to store data
     vector<uint8_t> data;
-    
+
+    //opcode is .byte
     if (instr.opcode == ".byte") {
+        //parsing each operand to integer
         for (const auto& operand : instr.operands) {
             int32_t value = parseImmediate(operand, instr.lineNumber);
             if (value > numeric_limits<int8_t>::max() || value < numeric_limits<int8_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in byte at line " << instr.lineNumber<< endl;
             
             data.push_back(static_cast<uint8_t>(value & 0xFF));
         }
-    } else if (instr.opcode == ".half") {
+    } 
+
+    //opcode is .half
+    else if (instr.opcode == ".half") {
+        //parsing each operand to integer
         for (const auto& operand : instr.operands) {
             int32_t value = parseImmediate(operand, instr.lineNumber); 
             if (value > numeric_limits<int16_t>::max() || value < numeric_limits<int16_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in half word at line " << instr.lineNumber<< endl;
 
-            
+            //pushing each byte to data vector
             data.push_back(static_cast<uint8_t>(value & 0xFF));
             data.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
         }
-    } else if (instr.opcode == ".word") {
+    }
+
+    //opcode is .word
+    else if (instr.opcode == ".word") {
+        //parsing each operand to integer
         for (const auto& operand : instr.operands) {
             int32_t value = parseImmediate(operand, instr.lineNumber);
             if (value > numeric_limits<int32_t>::max() || value < numeric_limits<int32_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in word at line " << instr.lineNumber<< endl;
-
+            //pushing each byte to data vector
             data.push_back(static_cast<uint8_t>(value & 0xFF));
             data.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
             data.push_back(static_cast<uint8_t>((value >> 16) & 0xFF));
             data.push_back(static_cast<uint8_t>((value >> 24) & 0xFF));
         }
-    } else if (instr.opcode == ".dword") {
+    } 
+
+    //opcode is .dword
+    else if (instr.opcode == ".dword") {
+        //parsing each operand to integer
         for (const auto& operand : instr.operands) {
             int64_t value = Immediate_64(operand, instr.lineNumber);
             if (value > numeric_limits<int64_t>::max() || value < numeric_limits<int64_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in double word at line " << instr.lineNumber<< endl;
-
+            //pushing each byte to data vector
             for (int i = 0; i < 8; i++) {
                 data.push_back(static_cast<uint8_t>((value >> (i * 8)) & 0xFF));
             }
         }
-    } else if (instr.opcode == ".asciiz") {
+    } 
+
+    //opcode is .asciiz
+    else if (instr.opcode == ".asciiz") {
+
+        //extracting string from operand
         string str = instr.operands[0];
         if (str.size() >= 2 && str.front() == '"' && str.back() == '"') {
             str = str.substr(1, str.size() - 2);
         }
         
+        //pushing each byte to data vector
         for (char c : str) {
             data.push_back(static_cast<uint8_t>(c));
         }
+        //pushing null terminator
         data.push_back(0);       
     }
-    
     return data;
 }
 
+//function to encode instructions
 uint32_t encodeInstruction(const Instruction& instr, uint32_t address, const SymbolTable& symbolTable) {
+    //switch case to encode instructions based on type
     switch (instr.type) {
         case R_TYPE:
             return encodeR(instr);
@@ -412,6 +488,7 @@ uint32_t encodeInstruction(const Instruction& instr, uint32_t address, const Sym
     }
 }
 
+//function to generate encoding comment
 string generateEncodingComment(const Instruction& instr, uint32_t machineCode) {
     stringstream comment;
     
