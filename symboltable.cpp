@@ -1,53 +1,49 @@
 #include "symboltable.h"
 #include <iostream>
 #include <iomanip>
-
 using namespace std;
 
-SymbolTable::SymbolTable()  
-{
+// constructor
+SymbolTable::SymbolTable(){ 
     textCursor = TEXT_SEGMENT_START;
     dataCursor = DATA_SEGMENT_START;
-    
     currentSegment = TEXT;
 }
-  
-void SymbolTable::addSymbol(const string& name, uint32_t address)  
-{
-    if (symbols.find(name) != symbols.end()) 
-    {
+
+// function to add symbol to the symbol table
+void SymbolTable::addSymbol(const string& name, uint32_t address){ 
+    if (symbols.find(name) != symbols.end())
         cerr << "Warning!! Symbol '" << name << "' already defined. Overwriting previous value." << endl;
-    }
-    symbols[name] = address;
+    symbols[name] = address; // adding symbol to the symbol table
 }
 
-uint32_t SymbolTable::getSymbolAddress(const string& name) const
-{   
+// function to get the address of the symbol from the symbol table
+uint32_t SymbolTable::getSymbolAddress(const string& name) const{ 
     //checking for symbols
-    if (symbols.find(name) == symbols.end())
-    {
+    if (symbols.find(name) == symbols.end()){
         cerr << "Error!! Symbol '" << name << "' not found in symbol table." << endl;
         return 0; 
     }
     return symbols.at(name);
 }          
 
-bool SymbolTable::hasSymbol(const string& name) const
-{
+// function to check if the symbol is present in the symbol table
+bool SymbolTable::hasSymbol(const string& name) const{ 
     return symbols.find(name) != symbols.end();
-}       
+}
 
-void SymbolTable::setCurrentSegment(MemorySegment segment)      
-{
+// function to set the current segment
+void SymbolTable::setCurrentSegment(MemorySegment segment){ 
     currentSegment = segment;
 }
 
-MemorySegment SymbolTable::getCurrentSegment() const 
-{
+// function to get the current segment
+MemorySegment SymbolTable::getCurrentSegment() const { 
     return currentSegment;
 }
 
-uint32_t SymbolTable::getCurrentAddress() const {
+// function to check the current segment and return the current address accordingly
+uint32_t SymbolTable::getCurrentAddress() const { 
     switch (currentSegment) {
         case TEXT:
             return textCursor;
@@ -62,7 +58,8 @@ uint32_t SymbolTable::getCurrentAddress() const {
     }
 }
 
-void SymbolTable::incrementAddress(uint32_t increment) {
+// function to increment the address of the cursor corresponding to the current segment
+void SymbolTable::incrementAddress(uint32_t increment) { 
     switch (currentSegment) {
         case TEXT:
             textCursor += increment;
@@ -70,34 +67,36 @@ void SymbolTable::incrementAddress(uint32_t increment) {
         case DATA:
             dataCursor += increment;
             break;
-        // heap and stack addresses not handled by the assembler
+        // warning if the address is incremented in heap or stack segment
         case HEAP:
         case STACK:
-            cerr << "Warning!! Attempting to increment address in heap or stack segment." << endl;  //throw error
+            cerr << "Warning!! Attempting to increment address in heap or stack segment." << endl;
             break;
     }
 }
 
-void SymbolTable::resetCursors() {
+// function to reset the cursors to the start of the segments
+void SymbolTable::resetCursors() { 
     textCursor = TEXT_SEGMENT_START;
     dataCursor = DATA_SEGMENT_START;
 }
 
-void SymbolTable::printSymbolTable() const {
+// function to print the symbol table
+void SymbolTable::printSymbolTable() const { 
     // Print the symbol table for debugging
     cout << "Symbol Table:" << endl;
     cout << "-------------" << endl;
     cout << left << setw(20) << "Symbol" << "Address" << endl;
     cout << "-------------------------------" << endl;
     
-    for (const auto& entry : symbols) {
+    for (const auto& entry : symbols) {   // formatting the output
         cout << left << setw(20) << entry.first 
                   << "0x" << hex << setw(8) << setfill('0') << right
                   << entry.second << dec << setfill(' ') << endl;
     }
     
     cout << "-------------------------------" << endl;
-    cout << "Text Cursor: 0x" << hex << setw(8) << setfill('0') << textCursor << endl;
-    cout << "Data Cursor: 0x" << hex << setw(8) << setfill('0') << dataCursor << endl;
+    cout << "Text Cursor: 0x" << hex << setw(8) << setfill('0') << textCursor << endl; // printing the text cursor
+    cout << "Data Cursor: 0x" << hex << setw(8) << setfill('0') << dataCursor << endl; // printing the data cursor
     cout << dec << setfill(' ');
 }
