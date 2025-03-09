@@ -12,37 +12,40 @@ int main() {
     string outputFile = "output.mc";
     SymbolTable symbolTable;
 
-    // first pass
+    // -------------------------- FIRST PASS -------------------------
     cout << "\nFirst pass : Building symbol table..." << endl;
 
-    vector<Instruction> instructions = parseFile(inputFile);
+    vector<Instruction> instructions = parseFile(inputFile); // parse the input file (done in parser.cpp)
     if (instructions.empty()) {
         cerr << "Error: No instructions found or file could not be opened." << endl;
         return 1;
     }
 
-    symbolTable.setCurrentSegment(TEXT);
+    symbolTable.setCurrentSegment(TEXT); // start with text segment (default)
 
+    // now we go to each instruction, check its type and update the symbol table accordingly
     for (const auto& instr : instructions) {
         if (instr.type!=DIRECTIVE) {
             symbolTable.setCurrentSegment(TEXT);
         }
 
-        // add label to symbol table
         if (instr.hasLabel && instr.type!=DIRECTIVE) {
-            symbolTable.addSymbol(instr.label, symbolTable.getCurrentAddress());
+            symbolTable.addSymbol(instr.label, symbolTable.getCurrentAddress()); // add label to symbol table
         }
         
         if (instr.type == DIRECTIVE) {
-            if (instr.opcode == ".text") {              // start of text segment
-                symbolTable.setCurrentSegment(TEXT);
-            } else if (instr.opcode == ".data") {       // start of data segment
+            if (instr.opcode == ".text") {              
+                symbolTable.setCurrentSegment(TEXT);    // switch to the text segment
+            } else if (instr.opcode == ".data") {       // switch to the data segment
                 symbolTable.setCurrentSegment(DATA);
             } 
             else{
                 symbolTable.setCurrentSegment(DATA);
-                if (instr.hasLabel) symbolTable.addSymbol(instr.label, symbolTable.getCurrentAddress());
+                if (instr.hasLabel) {
+                    symbolTable.addSymbol(instr.label, symbolTable.getCurrentAddress()); // add label to symbol table
+                }
 
+                // increment address of data cursor based on directive
                 if (instr.opcode == ".byte") {
                     symbolTable.incrementAddress(instr.operands.size());
                 } else if (instr.opcode == ".half") {
@@ -59,59 +62,54 @@ int main() {
                 }
             }
         } else if (instr.type != LABEL) {
-            symbolTable.incrementAddress(4);
+            symbolTable.incrementAddress(4); // if the instruction is not a label or directive, increment address of text cursor by 4
         }
     }
 
+    // print the final Symbol Table after completion of first pass
     cout<<endl;
     symbolTable.printSymbolTable();
 
-    // second pass
+    // -------------------------- SECOND PASS -------------------------
     cout << "\nSecond pass : Generating machine code..." << endl;
 
+    // reset the data and text cursors to the beginning and reset the segment to text
     symbolTable.resetCursors();
     symbolTable.setCurrentSegment(TEXT);
 
-    ofstream outFile(outputFile);
+    ofstream outFile(outputFile); // open the output file
     if (!outFile.is_open()) {
         cerr << "Error: Output file " << outputFile << " could not be opened" << endl;
         return 1;
     }
 
+    // now we go to each instruction, check its type and generate the machine code accordingly
     for (const auto& instr : instructions) {
-        uint32_t currentAddress = symbolTable.getCurrentAddress();
+        uint32_t currentAddress = symbolTable.getCurrentAddress(); // get the current address
 
         if (instr.type == DIRECTIVE) {
             if (instr.opcode == ".text") {
-                symbolTable.setCurrentSegment(TEXT);
+                symbolTable.setCurrentSegment(TEXT); // switch to the text segment 
             } else if (instr.opcode == ".data") {
-                symbolTable.setCurrentSegment(DATA);
+                symbolTable.setCurrentSegment(DATA); // switch to the data segment
             } else if (instr.opcode == ".byte" || instr.opcode == ".half" || instr.opcode == ".word" || instr.opcode == ".dword" || instr.opcode == ".asciiz") {
-                symbolTable.setCurrentSegment(DATA);
-                currentAddress = symbolTable.getCurrentAddress();
-                vector<uint8_t> data = encodeDirective(instr);
-            
-                // for (size_t i = 0; i < data.size(); i++) {
-                //     if (i % 4 == 0) {
-                //         // Start a new line for each word
-                //         if (i > 0) outFile << endl;
-                //         outFile << intToHex(currentAddress + i) << " ";
-                //     }
-                //     outFile << hex << setw(2) << setfill('0') 
-                //             << static_cast<int>(data[i]);
-                // }
+                symbolTable.setCurrentSegment(DATA); // switch to the data segment
+                currentAddress = symbolTable.getCurrentAddress(); // get the current address
+                vector<uint8_t> data = encodeDirective(instr); // returns a vector of bytes containing the data to be added to the data memory
 
+                // write the data to the output file
                 for (size_t i = 0; i < data.size(); i++) { 
                     if (i % 4 == 0) {
-                        if (i > 0) outFile << endl;
-                        outFile << intToHex(currentAddress + i) << " ";
+                        if (i > 0) outFile << endl; // print a newline after every 4 bytes
+                        outFile << intToHex(currentAddress + i) << " "; // print the address
                     }
                     
-                    char buffer[3];            
-                    snprintf(buffer, sizeof(buffer), "%02X", static_cast<int>(data[i]));
-                    outFile << buffer << " ";
+                    char buffer[3]; // buffer to store the hex value of the byte
+                    snprintf(buffer, sizeof(buffer), "%02X", static_cast<int>(data[i])); // convert the byte to hex
+                    outFile << buffer << " "; // print the hex value of the byte
                 }
                 
+                // print the type of directive and the data
                 outFile << " , " << instr.opcode;
                 for (size_t i = 0; i < instr.operands.size(); i++) {
                     outFile << " " << instr.operands[i];
@@ -119,20 +117,20 @@ int main() {
                 }
                 outFile << endl;
                 
-                symbolTable.incrementAddress(data.size());
+                symbolTable.incrementAddress(data.size()); // increment the address of the data cursor
             }
-        } 
-        else if (instr.type != LABEL && instr.type != UNKNOWN) {
-            symbolTable.setCurrentSegment(TEXT);
+        }
+        else if (instr.type != LABEL && instr.type != UNKNOWN) { // if the instruction is a normal text instruction
+            symbolTable.setCurrentSegment(TEXT); // switch to the text segment
 
-            currentAddress = symbolTable.getCurrentAddress();
-            uint32_t machineCode = encodeInstruction(instr, currentAddress, symbolTable);
-            string encodingComment = generateEncodingComment(instr, machineCode);
+            currentAddress = symbolTable.getCurrentAddress(); // get the current address
+            uint32_t machineCode = encodeInstruction(instr, currentAddress, symbolTable); // generate the machine code for the instruction (done in encoder.cpp)
+            string encodingComment = generateEncodingComment(instr, machineCode); // generate the encoding comment for the instruction (done in encoder.cpp)
 
-            string outputLine = formatOutputLine(currentAddress, machineCode, instr, encodingComment);
-            outFile << outputLine << endl;
+            string outputLine = formatOutputLine(currentAddress, machineCode, instr, encodingComment); // format the output line according to the format
+            outFile << outputLine << endl; // write the output line to the output file
             
-            symbolTable.incrementAddress(4);
+            symbolTable.incrementAddress(4); // increment the address of the text cursor
         }
     }
     outFile.close();
