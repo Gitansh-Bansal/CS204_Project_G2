@@ -84,6 +84,7 @@ int main() {
         cerr << "Error: Output file " << outputFile << " could not be opened" << endl;
         return 1;
     }
+    stringstream memoryStream; // stream to store the memory contents
 
     // instruction for termination
     Instruction instr;
@@ -111,9 +112,9 @@ int main() {
 
                 // write the data to the output file
                 for (size_t i = 0; i < data.size(); i++) { 
-                    outFile << intToHex(currentAddress + i) << " 0x";
-                    outFile << hex << right <<setw(2) << setfill('0') << static_cast<int>(data[i]);
-                    outFile << endl;
+                    memoryStream << intToHex(currentAddress + i) << " 0x";
+                    memoryStream << hex << right <<setw(2) << setfill('0') << static_cast<int>(data[i]);
+                    memoryStream << endl;
                 }
                 symbolTable.incrementAddress(data.size()); // increment the address of the data cursor
             }
@@ -139,6 +140,7 @@ int main() {
             break;
         }
     }
+    outFile << endl << memoryStream.str(); // write the data memory contents to the output file
     outFile.close();
     cout << "Output successfully written to " << outputFile << endl << endl;
     return 0;
