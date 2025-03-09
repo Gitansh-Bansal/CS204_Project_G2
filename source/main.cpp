@@ -10,7 +10,7 @@
 #include "symboltable.h"
 
 int main() {
-    string inputFile = "test1.asm";
+    string inputFile = "input.asm";
     string outputFile = "output.mc";
     SymbolTable symbolTable;
 
