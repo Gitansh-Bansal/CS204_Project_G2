@@ -29,7 +29,7 @@ Adhering to the **RISC-V 32-bit Instruction Set Architecture (ISA)**, the assemb
   - **UJ-type**: `jal`  
 - **Assembler Directives Support**:  
   `.text, .data, .byte, .half, .word, .dword, .asciiz`  
-- **Symbol Table Management**: Tracks and keeps record of labels and memory locations.  
+- **Symbol Table Management**: Tracks and keeps record of labels and memory locations. Also displaying final symbol table. 
 - **Two-Pass Assembly Process**: Ensures correct label resolution.
 - **Error Reporting**: Detects and Reports Syntactic and Semantic Errors in the input (Incorrect Instruction Formats, Immediate Overflows, Undefined Labels, Invalid Registers, etc.).
 - **Conprehensive File Structure**: Ensures proper understandability and and modularity of the code.
@@ -73,12 +73,14 @@ andi x5, x6, 10
 #### **Output Format (`output.mc`):**
 The program will give the following `.mc` file in Output:
 ```
+0x00000000 0x003100b3 , add x1,x2,x3 # 0110011-000-0000000-00001-00010-00011-NULL
+0x00000004 0x00a37293 , andi x5,x6,10 # 0010011-111-NULL-00101-00110-000000001010
+0x00000008 0xffffffff , terminate  # Terminate
+
 0x10000000 0x0d
 0x10000001 0x19
 0x10000002 0x39
-0x00000000 0x003100b3 , add x1,x2,x3 # 0110011-000-0000000-00001-00010-00011-NULL
-0x00000004 0x00a37293 , andi x5,x6,10 # 0010011-111-NULL-00101-00110-000000001010
-0x00000008 0x00000000 , terminate  # Terminate
+
 ```
 
 ---
@@ -99,7 +101,7 @@ The program will give the following `.mc` file in Output:
 ## Compilation and Execution
 
 ### **To Compile:**
-Use **G++** to compile the assembler:
+Use **G++** to compile the assembler in root directory:
 ```sh
 g++ -o assembler src/*.cpp -I include
 ```
