@@ -9,14 +9,13 @@
 - [Compilation and Execution](#compilation-and-execution)
 - [Memory Layout](#memory-layout)
 - [Team Members](#team-members)
-- [Notes](#notes)
 
 ---
 
 ## Project Overview
-This project is a **32-bit RISC-V assembler** that translates assembly language instructions into machine code, similar to the **Venus assembler**. It processes an input `.asm` file and generates an output `.mc` file with encoded machine instructions. The assembler follows the **RISC-V 32-bit Instruction Set Architecture (ISA)** and supports **31 core instructions** across different formats (R, I, S, SB, U, and UJ).
+This project implements a **32-bit RISC-V assembler** that translates assembly language instructions into **binary machine code** executable by a RISC-V processor. The assembler processes an input `.asm` file, converts instructions into machine-readable format using a **two-pass assembly mechanism**, and generates an output `.mc` file containing the encoded instructions along with their respective memory addresses and binary representations. The assembler supports **31 core RISC-V instructions** across multiple formats (R, I, S, SB, U, and UJ) and includes support for essential **assembler directives** for data management.
 
-The generated `.mc` file includes memory addresses, encoded instructions, and comments for easier debugging.
+Adhering to the **RISC-V 32-bit Instruction Set Architecture (ISA)**, the assembler efficiently manages labels through a **Symbol Table**, ensuring accurate instruction encoding and memory address resolution. The structured output format enhances code debugging and analysis. This project provides a comprehensive understanding of the assembly process and serves as an essential tool for bridging high-level assembly code and low-level machine execution.
 
 ---
 
@@ -29,11 +28,12 @@ The generated `.mc` file includes memory addresses, encoded instructions, and co
   - **U-type**: `auipc, lui`  
   - **UJ-type**: `jal`  
 - **Assembler Directives Support**:  
-  `.text, .data, .byte, .half, .word, .dword, .asciz`  
-- **Symbol Table Management**: Tracks labels and memory locations.  
-- **Two-Pass Assembly Process**: Ensures correct label resolution.  
-- **Venus-style Output Format**: Provides clear and structured machine code output.  
-
+  `.text, .data, .byte, .half, .word, .dword, .asciiz`  
+- **Symbol Table Management**: Tracks and keeps record of labels and memory locations.  
+- **Two-Pass Assembly Process**: Ensures correct label resolution.
+- **Error Reporting**: Detects and Reports Syntactic and Semantic Errors in the input (Incorrect Instruction Formats, Immediate Overflows, Undefined Labels, Invalid Registers, etc.).
+- **Conprehensive File Structure**: Ensures proper understandability and and modularity of the code.
+  
 ---
 
 ## File Structure
@@ -46,7 +46,7 @@ The generated `.mc` file includes memory addresses, encoded instructions, and co
 │── 📄 encoder.h           # Header file for instruction encoding
 │── 📄 symboltable.cpp     # Manages symbol table (labels, memory addresses)
 │── 📄 symboltable.h       # Header file for the symbol table
-│── 📄 test1.asm           # Sample RISC-V assembly program
+│── 📄 input.asm           # Input RISC-V assembly program 
 │── 📄 output.mc           # Machine code output file
 │── 📄 README.md           # Project documentation
 ```
@@ -55,22 +55,25 @@ The generated `.mc` file includes memory addresses, encoded instructions, and co
 
 ## Input and Output Format
 
-### **Input Format (`test1.asm`)**
+#### **Input Format (`input.asm`):**
 The `.asm` file contains **one instruction per line**:
 ```
+.data
+arr: .byte 13, 25, 57
+.text
 add x1, x2, x3
 andi x5, x6, 10
 ```
 
-### **Output Format (`output.mc`)**
-Each line follows the format:
+#### **Output Format (`output.mc`):**
+The program will give the following `.mc` file in Output:
 ```
-<memory_address> <machine_code> , <assembly_instruction> # <binary_encoding>
-```
-**Example:**
-```
-0x0 0x003100B3 , add x1,x2,x3 # 0110011-000-0000000-00001-00010-00011-NULL
-0x4 0x00A37293 , andi x5,x6,10 # 0010011-111-NULL-00101-00110-000000001010
+0x10000000 0x0d
+0x10000001 0x19
+0x10000002 0x39
+0x00000000 0x003100b3 , add x1,x2,x3 # 0110011-000-0000000-00001-00010-00011-NULL
+0x00000004 0x00a37293 , andi x5,x6,10 # 0010011-111-NULL-00101-00110-000000001010
+0x00000008 0x00000000 , terminate  # Terminate
 ```
 
 ---
@@ -100,7 +103,7 @@ g++ -o assembler main.cpp parser.cpp encoder.cpp symboltable.cpp
 ```sh
 ./assembler
 ```
-This will generate an `output.mc` file containing the assembled machine code.
+This will generate an `output.mc` file containing the assembled machine code corresponding to the Assembly Code in `input.asm` file.
 
 ---
 
@@ -116,17 +119,9 @@ The assembler follows a predefined memory layout:
 ---
 
 ## Team Members
-- **Gitansh Bansal**
-- **Mohakjot Dhiman**
-- **Shaurya Anant**
-
----
-
-## Notes
-- **Pseudo-instructions are not supported**.
-- **Floating-point operations are not included**.
-- Labels are resolved using a **two-pass approach**.
-- The assembler assumes **aligned memory access** for instructions and data.
+- **Gitansh Bansal (2023MCB1294)**
+- **Mohakjot Dhiman (2023MCB1302)**
+- **Shaurya Anant (2023CSB1313)**
 
 ---
 
