@@ -2,9 +2,9 @@
 #define PARSER_H
 #include <string>
 #include <vector>
-
 using namespace std;
 
+// defining the different types of instructions
 enum InstructionType {
     R_TYPE,
     I_TYPE,
@@ -17,6 +17,7 @@ enum InstructionType {
     UNKNOWN
 };
 
+// defining the structure of an instruction
 struct Instruction {
     string label;
     string opcode; 
@@ -27,6 +28,7 @@ struct Instruction {
     bool hasLabel; 
 };
 
+// defining the functions that will be used in the parser
 bool isDirective(const string& token);
 InstructionType getInstructionType(const string& opcode);
 Instruction parseLine(const string& line, int lineNumber);
