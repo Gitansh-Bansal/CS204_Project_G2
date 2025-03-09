@@ -44,13 +44,13 @@ Adhering to the **RISC-V 32-bit Instruction Set Architecture (ISA)**, the assemb
 │   ├── 📄 parser.h        # Header file for instruction parsing  
 │   ├── 📄 symboltable.h   # Header file for symbol table management  
 │  
-├── 📂 src/             # Contains all source files  
+├── 📂 src/                # Contains all source files  
 │   ├── 📄 main.cpp        # Main program handling file processing and instruction encoding  
 │   ├── 📄 encoder.cpp     # Encodes instructions into machine code  
 │   ├── 📄 parser.cpp      # Parses assembly instructions and extracts components  
 │   ├── 📄 symboltable.cpp # Manages symbol table (labels, memory addresses)  
 │  
-├── 📄 test1.asm           # Sample RISC-V assembly program  
+├── 📄 input.asm           # Sample RISC-V assembly program  
 ├── 📄 output.mc           # Machine code output file  
 ├── 📄 README.md           # Project documentation  
 
