@@ -10,11 +10,11 @@ using namespace std;
 
 class RegisterState {
 private:
-    vector<int32_t> regFile;  // 32 general purpose registers
+    vector<int32_t> regFile(32);  // 32 general purpose registers
     uint32_t pc;                    
     uint32_t ir;                    
       
-    unordered_map<string, int32_t> tempRegisters;  // for other registers like RM, RY, RA, RB, etc...
+    unordered_map<string, int32_t> tempReg;  // for other registers like RM, RY, RA, RB, etc...
     
 public:
     RegisterState();
