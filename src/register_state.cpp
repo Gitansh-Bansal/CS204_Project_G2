@@ -25,3 +25,55 @@ void RegisterState::reset() {
         {"IMM", 0}
     };
 }
+
+uint32_t RegisterState::get_pc() const {
+    return pc;
+}
+
+void RegisterState::set_pc(uint32_t val) {
+    pc = val;
+}
+
+void RegisterState::increment_pc(int offset) {
+    pc += offset;
+}
+
+uint32_t RegisterState::get_ir() const {
+    return ir;
+}
+
+void RegisterState::set_ir(uint32_t val) {
+    ir = val;
+}
+
+int32_t RegisterState::get(uint32_t reg_num) const {
+    if (reg_num >= 32) {
+        cerr << "Error: Invalid register number: " << reg_num << endl;
+        return 0;
+    }
+    return reg_file[reg_num];
+}
+
+void RegisterState::set(uint32_t reg_num, int32_t val) {
+    if (reg_num >= 32) {
+        cerr << "Error: Invalid register number: " << reg_num << endl;
+        return;
+    }
+    
+    if (reg_num != 0) {
+        reg_file[reg_num] = val;
+    }
+}
+
+int32_t RegisterState::get_temp(const string& reg_name) const {
+    auto it = temp_registers.find(reg_name);
+    if (it == temp_registers.end()) {
+        cerr << "Error: Temporary register '" << reg_name << "' not found" << endl;
+        return 0;
+    }
+    return it->second;
+}
+
+void RegisterState::set_temp(const string& reg_name, int32_t val) {
+    temp_registers[reg_name] = val;
+}
