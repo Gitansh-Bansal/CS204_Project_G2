@@ -100,4 +100,34 @@ bool Memory::load_from_file(const string& filename) {
     return true;
 }
 
+void Memory::printMemory(uint32_t start_addr, uint32_t end_addr) const {
+    
+    cout << "Memory dump from 0x" << hex << start_addr 
+              << " to 0x" << end_addr << ":" << endl;
+    
+    for (uint32_t addr = start_addr; addr <= end_addr; addr += 16) {
+        cout << "0x" << hex << setw(8) << setfill('0') << addr << ": ";
+        
+        // Print hex values
+        for (int i = 0; i < 16; i++) {
+            cout << setw(2) << setfill('0') 
+                      << static_cast<int>(read_byte(addr + i)) << " ";
+            if (i == 7) {
+                cout << " ";  
+            }
+        }
+        
+        // Print ASCII representation
+        cout << " |";
+        for (int i = 0; i < 16; i++) {
+            uint8_t byte = read_byte(addr + i);
+            char c = (byte >= 32 && byte <= 126) ? static_cast<char>(byte) : '.';
+            cout << c;
+        }
+        cout << "|" << endl;
+    }
+    
+    cout << dec; 
+}
+
 
