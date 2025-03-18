@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+using namespace std;
 
 Memory::Memory() {
     reset();
@@ -51,4 +52,52 @@ void Memory::write_half(uint32_t address, uint16_t value) {
     write_byte(address, (value >> 0) & 0xFF);
     write_byte(address + 1, (value >> 8) & 0xFF);
 }
+
+bool Memory::load_from_file(const string& filename) {
+
+    ifstream file(filename);
+    if (!file.is_open()) {
+        cerr << "Error: Could not open file " << filename << endl;
+        return false;
+    }
+    
+    string line;
+    while (getline(file, line)) {
+        
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
+        
+        istringstream iss(line);
+        string addr_str, value_str;
+        
+        // Parse address and value
+        if (!(iss >> addr_str >> value_str)) {
+            continue;  
+        }
+        
+        // Convert hex strings to integers
+        uint32_t address, value;
+        try {
+            address = stoul(addr_str, nullptr, 16);
+            value = stoul(value_str, nullptr, 16);
+            
+            if (value <= 0xFF) 
+            {
+                write_byte(address, static_cast<uint8_t>(value));
+            }
+             else
+            {
+                write_word(address, value);
+            }
+        } catch (const exception& e) {
+            cerr << "Error parsing line: " << line << endl;
+            continue;
+        }
+    }
+    
+    file.close();
+    return true;
+}
+
 
