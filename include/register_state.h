@@ -30,8 +30,8 @@ public:
     void setIR(uint32_t val);
     
     // general purpose register operations
-    int32_t get(uint32_t reg_num) const;
-    void set(uint32_t reg_num, int32_t val);
+    int32_t getGen(uint32_t reg_num) const;
+    void setGen(uint32_t reg_num, int32_t val);
     
     // temporary register operations
     int32_t getTemp(const string& reg_name) const;
