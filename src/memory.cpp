@@ -11,6 +11,7 @@ Memory::Memory() {
 
 void Memory::reset() {
     mem.clear();
+    cout<<"Memory Cleared."<<endl;
 }
 
 uint8_t Memory::readByte(uint32_t address) const {
@@ -23,6 +24,7 @@ uint8_t Memory::readByte(uint32_t address) const {
 
 void Memory::writeByte(uint32_t address, uint8_t value) {
     mem[address] = value;
+    cout<<hex<<"Memory Write: 0x"<<address<<" = 0x"<<(int)value<<endl;
 }
 
 uint32_t Memory::readWord(uint32_t address) const {
@@ -95,7 +97,7 @@ bool Memory::loadFromFile(const string& filename) {
             continue;
         }
     }
-    
+    cout<<"Instruction and Data Memory Loaded."<<endl;
     file.close();
     return true;
 }
