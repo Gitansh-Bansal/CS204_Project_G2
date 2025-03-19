@@ -19,7 +19,6 @@ private:
 
     struct DecodedInstruction {
         uint8_t opcode;
-        string type;
         int rd, rs1, rs2;
         int funct3, funct7;
         int32_t imm;
