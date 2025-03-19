@@ -10,20 +10,20 @@ Memory::Memory() {
 }
 
 void Memory::reset() {
-    mem.clear();
+    memoryMap.clear();
     cout<<"Memory Cleared."<<endl;
 }
 
 uint8_t Memory::readByte(uint32_t address) const {
-    auto it = mem.find(address);
-    if (it != mem.end()) {
+    auto it = memoryMap.find(address);
+    if (it != memoryMap.end()) {
         return it->second;
     }
     return 0;
 }
 
 void Memory::writeByte(uint32_t address, uint8_t value) {
-    mem[address] = value;
+    memoryMap[address] = value;
     cout<<hex<<"Memory Write: 0x"<<address<<" = 0x"<<(int)value<<endl;
 }
 
@@ -88,7 +88,7 @@ bool Memory::loadFromFile(const string& filename) {
             {
                 writeByte(address, static_cast<uint8_t>(value));
             }
-             else
+            else
             {
                 writeWord(address, value);
             }
