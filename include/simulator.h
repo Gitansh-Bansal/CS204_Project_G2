@@ -18,7 +18,7 @@ struct DecodedInstruction {
     int32_t imm;
 };
 
-void fetch(RegisterState &regState);    // read the instruction from memory address stored in PC and store the instruction in IR
+void fetch(RegisterState &regState, Memory &memory);    // read the instruction from memory address stored in PC and store the instruction in IR
 DecodedInstruction decode(RegisterState &regState);     // decode the instruction stored in IR and return a Decoded Instruction
 void execute(DecodedInstruction decodedInstr, RegisterState &regState);     // use the decoded instruction and perform the execute step according to the instruction type
 void memoryAccess(DecodedInstruction decodedInstr, RegisterState &regState, Memory &memory);    // memory access steps
