@@ -1,6 +1,7 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
+#include <cstdint>
 #include "register_state.h"
 #include "parser.h"
 
