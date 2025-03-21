@@ -31,7 +31,7 @@ void Simulator::step() {
     
     fetch();
     uint32_t instruction = regState.getIR();
-    DecodedInstruction decodedInst = decode(instruction);
+    DecodedInstruction decodedInst = decode();
     execute(decodedInst);
     memoryAccess(decodedInst);
     writeBack(decodedInst);
@@ -71,7 +71,8 @@ void Simulator::fetch() {
 
 // decodes the instruction stored in the IR
 // returns a DecodedInstruction
-Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
+Simulator::DecodedInstruction Simulator::decode() {
+    uint32_t instruction = regState.getIR();
     cout << "DECODE STAGE : Decoding the instruction " << hex << "0x" << instruction << dec << endl;
     DecodedInstruction decodedInst;
 
@@ -153,6 +154,7 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
     regState.setTemp("RA", getGen(decodedInst.rs1));
     regState.setTemp("RB", getGen(decodedInst.rs2));
     regState.setTemp("IMM", decodedInst.imm);
+    regState.setTemp("RM",getGen(decodedInst.rs2));
 
     return decodedInst;
 }
@@ -297,7 +299,7 @@ void Simulator::execute(DecodedInstruction& decodedInst)
         }
         
         case 0x37: { // LUI
-            rz_val = imm_val>>12;
+            rz_val = imm_val<<12;
             break;
            
         }
@@ -320,7 +322,7 @@ void Simulator::execute(DecodedInstruction& decodedInst)
     }
     
     regState.setTemp("RZ", rz_val);
-    regState.setTemp("PC", next_pc);
+    regState.setPC(next_pc);
      
 }
 
