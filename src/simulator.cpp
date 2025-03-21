@@ -23,24 +23,25 @@ void Simulator::run() {
     while (isRunning()) {
         step();
     }
-    cout << "Simulation completed after " << clock << " cycles." << endl;
+    cout << "Simulation ended after " << clock << " cycles." << endl;
 }
 
 void Simulator::step() {
     cout << "\n===== Cycle " << clock << " =====" << endl;
-    
+
+    // 5 stages of the execution
     fetch();
-    uint32_t instruction = regState.getIR();
+    if (!isRunning()) return;
     DecodedInstruction decodedInst = decode();
     execute(decodedInst);
     memoryAccess(decodedInst);
     writeBack(decodedInst);
-    
+
     clock++;
 }
 
 bool Simulator::isRunning() const {
-    return pc!=0xffffffff;
+    return regState.getIR()!=0xffffffff;
 }
 
 uint32_t Simulator::getClock() const {
@@ -62,18 +63,22 @@ void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr) const {
 // read the instruction stored at the pc and 
 // store it in IR (does not return anything)
 void Simulator::fetch() {
-    cout << "FETCH STAGE: Fetching the instruction stored at current PC 0x" << hex << regState.getPC() << dec << endl;
-    uint32_t pc = regState.getPC();
-    uint32_t instruction = memory.readWord(pc);
+    cout << "FETCH STAGE:\n";
+    uint32_t PC = regState.getPC();
+    if(PC%4!=0) {   
+        cerr << "Error: Unaligned memory access at address 0x" << hex << PC << dec << endl;
+        regState.setIR(0xffffffff);
+    }
+    uint32_t instruction = memory.readWord(PC);
     regState.setIR(instruction);
-    regState.setTemp("PC_TEMP", pc+4);
+    regState.setTemp("PC_TEMP", PC+4);
 }
 
 // decodes the instruction stored in the IR
 // returns a DecodedInstruction
 Simulator::DecodedInstruction Simulator::decode() {
     uint32_t instruction = regState.getIR();
-    cout << "DECODE STAGE : Decoding the instruction " << hex << "0x" << instruction << dec << endl;
+    cout << "\nDECODE STAGE:\n";
     DecodedInstruction decodedInst;
 
     decodedInst.opcode = instruction & 0x7F;
@@ -161,7 +166,7 @@ Simulator::DecodedInstruction Simulator::decode() {
 
 void Simulator::execute(DecodedInstruction& decodedInst) 
  {
-    cout << "EXECUTE: Performing operation for instruction with opcode 0x" << hex << decodedInst.opcode << dec << endl;
+    cout << "\nEXECUTE:\n";
     
     uint32_t opcode = decodedInst.opcode;
     uint32_t funct3 = decodedInst.funct3;
@@ -172,7 +177,7 @@ void Simulator::execute(DecodedInstruction& decodedInst)
     int32_t imm_val = regState.getTemp("IMM");
 
     int32_t rz_val = 0;
-    uint32_t next_pc = pc + 4;
+    uint32_t next_pc = regState.getTemp("PC_TEMP");
     
     switch (opcode) 
     {
@@ -233,7 +238,6 @@ void Simulator::execute(DecodedInstruction& decodedInst)
         
         // I-type instructions
         case 0x13: {
-            
             switch (funct3) 
             {
                 case 0x0: // ADDI
@@ -261,7 +265,7 @@ void Simulator::execute(DecodedInstruction& decodedInst)
         }
         
         case 0x67: { // JALR
-            rz_val = pc + 4;
+            rz_val = regState.getTemp("PC_TEMP");
             next_pc = (rs1_val + imm_val) & ~1; 
             break;
         }
@@ -293,7 +297,7 @@ void Simulator::execute(DecodedInstruction& decodedInst)
             
             if (take_branch) 
             {
-                next_pc = pc + imm_val;
+                next_pc = regState.getPC() + imm_val;
             }
             break;
         }
@@ -306,13 +310,13 @@ void Simulator::execute(DecodedInstruction& decodedInst)
         
         case 0x17: { // AUIPC
             imm_val = imm_val << 12;
-            rz_val = pc + imm_val;
+            rz_val = regState.getPC() + imm_val;
             break;
         }
         
         case 0x6F: { // JAL
-            rz_val = pc + 4; 
-            next_pc = pc + imm_val; 
+            rz_val = regState.getTemp("PC_TEMP"); 
+            next_pc = regState.getPC() + imm_val; 
             break;
         }
         
@@ -323,12 +327,14 @@ void Simulator::execute(DecodedInstruction& decodedInst)
     
     regState.setTemp("RZ", rz_val);
     regState.setPC(next_pc);
-     
 }
 
 void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
     cout << "\nMEMORY ACCESS STAGE:" << endl;
     
+    regState.setTemp("MDR", regState.getTemp("RM"));
+    regState.setTemp("MAR", regState.getTemp("RZ"));
+
     uint32_t opcode = decodedInst.opcode;
     uint32_t funct3 = decodedInst.funct3;
     
@@ -340,30 +346,23 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
             switch (funct3) {
                 case 0x0: 
                     regState.setTemp("MDR",static_cast<int32_t>(static_cast<int8_t>(memory.readByte(address))));
-                    regState.setTemp("RY",static_cast<int32_t>(static_cast<int8_t>(memory.readByte(address))));
                     break;
-                    
                 case 0x1: 
                     regState.setTemp("MDR",static_cast<int32_t>(static_cast<int16_t>(memory.readHalf(address))));
-                    regState.setTemp("RY",static_cast<int32_t>(static_cast<int16_t>(memory.readHalf(address))));
                     break;
-                    
                 case 0x2: 
                     regState.setTemp("MDR",static_cast<int32_t>(memory.readWord(address)));
-                    regState.setTemp("RY",static_cast<int32_t>(memory.readWord(address)));
                     break;
-
                 case 0x3:
                     cerr << "Error: 64-bit load not supported" << endl;
                     break;
-
                 default:
-                    cout << "Unknown load operation (funct3: 0x" << hex << funct3 << dec << ")" << endl;
+                    cerr << "Unknown load operation (funct3: 0x" << hex << funct3 << ")" << dec << endl;
                     break;
             }
+            regState.setTemp("RY", regState.getTemp("MDR"));
             break;
         }
-        
         case 0x23: {
             uint32_t data = regState.getTemp("RB");
             
@@ -371,32 +370,26 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
                 case 0x0: 
                     memory.writeByte(address, data & 0xFF);
                     break;
-                    
                 case 0x1: 
                     memory.writeHalf(address, data & 0xFFFF);
                     break;
-                    
                 case 0x2: 
                     memory.writeWord(address, data);
                     break;
-
                 case 0x3:
                     cerr << "Error: 64-bit store not supported" << endl;
                     break;
-                    
                 default:
-                    cout << "Unknown store operation with funct3: 0x" << hex << funct3 << dec << endl;
+                    cerr << "Unknown store operation (funct3: 0x" << hex << funct3 << ")" << dec << endl;
                     break;
             }
             break;
         }
-        
         default:
             regState.setTemp("RY", regState.getTemp("RZ"));
             break;
     }
     
-    pc = regState.getTemp("PC");
 }
 
 
