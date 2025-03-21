@@ -62,6 +62,7 @@ void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr) const {
 // read the instruction stored at the pc and 
 // store it in IR (does not return anything)
 void Simulator::fetch() {
+    cout << "FETCH STAGE: Fetching the instruction stored at current PC 0x" << hex << regState.getPC() << dec << endl;
     uint32_t pc = regState.getPC();
     uint32_t instruction = memory.readWord(pc);
     regState.setIR(instruction);
@@ -70,44 +71,54 @@ void Simulator::fetch() {
 // decodes the instruction stored in the IR
 // returns a DecodedInstruction
 Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
+    cout << "DECODE STAGE : Decoding the instruction " << hex << "0x" << instruction << dec << endl;
     DecodedInstruction decodedInst;
 
     decodedInst.opcode = instruction & 0x7F;
 
     switch(decodedInst.opcode) {
-        case(0x33):
+        case(0x33): // r type
             decodedInst.rd     = (instruction >> 7)  & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
             decodedInst.rs2    = (instruction >> 20) & 0x1F;
             decodedInst.funct7 = (instruction >> 25) & 0x7F;
+            regState.setTemp("RA", decodedInst.rs1);
+            regState.setTemp("RB", decodedInst.rs2);
             break;
-        case(0x13):
+        case(0x13): // i type
             decodedInst.rd     = (instruction >> 7)  & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
             decodedInst.imm = (instruction >> 20) & 0xFFF;
             if (decodedInst.imm & 0x800)
                 decodedInst.imm |= 0xFFFFF000;
+            regState.setTemp("RA", decodedInst.rs1);
+            regState.setTemp("IMM", decodedInst.imm);
             break;
-        case(0x03):  // load instructions
+        case(0x03):  // i type load instructions
             decodedInst.rd     = (instruction >> 7)  & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
             decodedInst.imm = (instruction >> 20) & 0xFFF;
             if (decodedInst.imm & 0x800)
                 decodedInst.imm |= 0xFFFFF000;
+            regState.setTemp("RA", decodedInst.rs1);
+            regState.setTemp("IMM", decodedInst.imm);
             break;
-        case(0x23):
+        case(0x23): // s type
             decodedInst.imm = (instruction >> 7) & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
             decodedInst.rs2    = (instruction >> 20) & 0x1F;
             decodedInst.imm |= ((instruction >> 25) & 0x7F) << 5;
             if (decodedInst.imm & 0x800)
-                decodedInst.imm |= 0xFFFFF000;
+                decodedInst.imm |= 0xFFFFF000;            
+            regState.setTemp("RA", decodedInst.rs1);
+            regState.setTemp("RB", decodedInst.rs2);
+            regState.setTemp("IMM", decodedInst.imm);
             break;
-        case(0x63):
+        case(0x63): // sb type
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1 = (instruction >> 15) & 0x1F;
             decodedInst.rs2 = (instruction >> 20) & 0x1F;
@@ -117,8 +128,11 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
                              ((instruction >> 7) & 0x1) << 11;
             if (decodedInst.imm & 0x1000)
                 decodedInst.imm |= 0xFFFFE000;
+            regState.setTemp("RA", decodedInst.rs1);
+            regState.setTemp("RB", decodedInst.rs2);
+            regState.setTemp("IMM", decodedInst.imm);
             break;
-        case(0x6F):  
+        case(0x6F): // uj type
             decodedInst.rd     = (instruction >> 7) & 0x1F;
             decodedInst.imm    = ((instruction >> 12) & 0xFF) << 12;  
             decodedInst.imm   |= ((instruction >> 20) & 0x1) << 11;   
@@ -126,6 +140,7 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
             decodedInst.imm   |= ((instruction >> 31) & 0x1) << 20; 
             if (decodedInst.imm & 0x100000)
                 decodedInst.imm |= 0xFFF00000;
+            regState.setTemp("IMM", decodedInst.imm);
             break;
         case(0x67):  // jalr
             decodedInst.rd     = (instruction >> 7) & 0x1F;
@@ -134,14 +149,18 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
             decodedInst.imm    = (instruction >> 20) & 0xFFF;
             if (decodedInst.imm & 0x800)
                 decodedInst.imm |= 0xFFFFF000;
+            regState.setTemp("RA", decodedInst.rs1);
+            regState.setTemp("IMM", decodedInst.imm);
             break;
         case(0x37):  // lui
             decodedInst.rd     = (instruction >> 7) & 0x1F;
             decodedInst.imm    = (instruction & 0xFFFFF000);
+            regState.setTemp("IMM", decodedInst.imm);
             break;
         case(0x17):  // auipc
             decodedInst.rd     = (instruction >> 7) & 0x1F;
             decodedInst.imm    = (instruction & 0xFFFFF000);
+            regState.setTemp("IMM", decodedInst.imm);
             break;
         default:     // Unknown instruction
             cout << "Unknown instruction with opcode 0x" << hex << decodedInst.opcode << dec << endl;

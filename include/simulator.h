@@ -20,7 +20,6 @@ private:
 
     struct DecodedInstruction {
         uint8_t opcode = 0;
-        InstructionType type = UNKNOWN;
         int rd=0, rs1=0, rs2=0;
         int funct3=0, funct7=0;
         int32_t imm=0;
