@@ -212,12 +212,9 @@ void Simulator::execute(DecodedInstruction& decodedInst)
     
     regState.setTemp("RZ", rz_val);
     regState.setTemp("PC", next_pc);
-    
-        
-        
+     
 }
 
-void Simulator::memoryAccess(DecodedInstruction& decodedInst) 
 void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
     cout << "\nMEMORY ACCESS STAGE:" << endl;
     
