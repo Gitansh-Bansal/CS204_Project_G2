@@ -3,7 +3,9 @@
 #include <iomanip>
 
 Simulator::Simulator() {
-    reset();
+    pc=0;
+    clock=0;
+    cout<<"Simulator initialized!"<<endl;
 }
 
 void Simulator::reset() {

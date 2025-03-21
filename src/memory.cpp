@@ -6,7 +6,8 @@
 using namespace std;
 
 Memory::Memory() {
-    reset();
+    memoryMap.clear();
+    cout << "Memory Initialized!" << endl;
 }
 
 void Memory::reset() {
