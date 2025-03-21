@@ -27,7 +27,8 @@ void Simulator::run() {
 void Simulator::step() {
     cout << "\n===== Cycle " << clock << " =====" << endl;
     
-    uint32_t instruction = fetch();
+    fetch();
+    uint32_t instruction = regState.getIR();
     DecodedInstruction decodedInst = decode(instruction);
     execute(decodedInst);
     memoryAccess(decodedInst);
@@ -58,11 +59,10 @@ void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr) const {
 
 // read the instruction stored at the pc and 
 // store it in IR (does not return anything)
-uint32_t Simulator::fetch() {
+void Simulator::fetch() {
     uint32_t pc = regState.getPC();
     uint32_t instruction = memory.readWord(pc);
     regState.setIR(instruction);
-    return instruction;
 }
 
 // decodes the instruction stored in the IR

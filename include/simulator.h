@@ -36,7 +36,7 @@ public:
     void reset();
     bool loadProgram(const string& filename);
     void printRegisters() const;
-    void printMemory() const;
+    void printMemory(uint32_t start_addr, uint32_t end_addr) const;
     void run();
     void step();
     bool isRunning() const;

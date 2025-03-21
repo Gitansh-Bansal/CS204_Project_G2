@@ -10,7 +10,7 @@ using namespace std;
 
 class RegisterState {
 private:
-    vector<int32_t> regFile(32);  // 32 general purpose registers
+    vector<int32_t> regFile;  // 32 general purpose registers
     uint32_t pc;                    
     uint32_t ir;                    
       
