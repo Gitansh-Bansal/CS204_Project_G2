@@ -55,7 +55,7 @@ int32_t RegisterState::getGen(uint32_t reg_num) const {
         cerr << "Error: Invalid register number: " << reg_num << endl;
         return 0;
     }
-    return reg_file[reg_num];
+    return regFile[reg_num];
 }
 
 void RegisterState::setGen(uint32_t reg_num, int32_t val) {
@@ -65,14 +65,14 @@ void RegisterState::setGen(uint32_t reg_num, int32_t val) {
     }
     
     if (reg_num != 0) {
-        reg_file[reg_num] = val;
+        regFile[reg_num] = val;
     }
     cout<<"Value 0x"<<hex<<setw(8)<<setfill('0')<<" written to Register x"<<dec<<reg_num<<endl;
 }
 
 int32_t RegisterState::getTemp(const string& reg_name) const {
-    auto it = temp_registers.find(reg_name);
-    if (it == temp_registers.end()) {
+    auto it = tempReg.find(reg_name);
+    if (it == tempReg.end()) {
         cerr << "Error: Temporary register '" << reg_name << "' not found" << endl;
         return 0;
     }
@@ -80,7 +80,7 @@ int32_t RegisterState::getTemp(const string& reg_name) const {
 }
 
 void RegisterState::setTemp(const string& reg_name, int32_t val) {
-    temp_registers[reg_name] = val;
+    tempReg[reg_name] = val;
     cout<<"Value 0x"<<hex<<setw(8)<<setfill('0')<<" written to Temporary Register "<<reg_name<<endl;
 }
 
