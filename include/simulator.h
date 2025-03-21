@@ -25,7 +25,7 @@ private:
         int32_t imm=0;
     };
     
-    DecodedInstruction decode(uint32_t instruction);
+    DecodedInstruction decode();
     void execute(DecodedInstruction& decodedInst);
     void memoryAccess(DecodedInstruction& decodedInst);
     void writeBack(DecodedInstruction& decodedInst);

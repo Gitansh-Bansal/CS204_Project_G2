@@ -1,4 +1,4 @@
-#include<bits/stdc++.h>
+#include <bits/stdc++.h>
 #include "register_state.h"
 using namespace std;
 
@@ -18,7 +18,7 @@ RegisterState::RegisterState() {
         {"MDR", 0},
         {"IMM", 0}
     };
-    cout<<"All Registers Initialized!"<<endl;
+    cout << "All Registers Initialized!" << endl;
 }
 
 void RegisterState::reset() {
@@ -38,7 +38,7 @@ void RegisterState::reset() {
         {"IMM", 0},
         {"PC_TEMP", 0}
     };
-    cout<<"All Registers Reset to their Default Values!"<<endl;
+    cout << "All Registers Reset to their Default Values!" << endl;
 }
 
 uint32_t RegisterState::getPC() const {
@@ -47,12 +47,12 @@ uint32_t RegisterState::getPC() const {
 
 void RegisterState::setPC(uint32_t val) {
     pc = val;
-    cout<<"PC set to 0x"<<hex<<setw(8)<<setfill('0')<<val<<endl;
+    cout << "PC set to 0x" << hex << setw(8) << setfill('0') << val << dec << endl;
 }
 
 void RegisterState::incrementPC(int offset) {
     pc += offset;
-    cout<<"PC set to 0x"<<hex<<setw(8)<<setfill('0')<<pc<<endl;
+    cout << "PC set to 0x" << hex << setw(8) << setfill('0') << pc << dec << endl;
 }
 
 uint32_t RegisterState::getIR() const {
@@ -61,7 +61,7 @@ uint32_t RegisterState::getIR() const {
 
 void RegisterState::setIR(uint32_t val) {
     ir = val;
-    cout<<"IR set to 0x"<<hex<<setw(8)<<setfill('0')<<val<<endl;
+    cout << "IR set to 0x" << hex << setw(8) << setfill('0') << val << dec << endl;
 }
 
 int32_t RegisterState::getGen(uint32_t reg_num) const {
@@ -81,7 +81,8 @@ void RegisterState::setGen(uint32_t reg_num, int32_t val) {
     if (reg_num != 0) {
         regFile[reg_num] = val;
     }
-    cout<<"Value 0x"<<hex<<setw(8)<<setfill('0')<<" written to Register x"<<dec<<reg_num<<endl;
+    cout << "Value 0x" << hex << setw(8) << setfill('0') << val
+         << " written to Register x" << dec << reg_num << endl;
 }
 
 int32_t RegisterState::getTemp(const string& reg_name) const {
@@ -95,7 +96,8 @@ int32_t RegisterState::getTemp(const string& reg_name) const {
 
 void RegisterState::setTemp(const string& reg_name, int32_t val) {
     tempReg[reg_name] = val;
-    cout<<"Value 0x"<<hex<<setw(8)<<setfill('0')<<" written to Temporary Register "<<reg_name<<endl;
+    cout << "Value 0x" << hex << setw(8) << setfill('0') << val
+         << " written to Temporary Register " << reg_name << dec << endl;
 }
 
 void RegisterState::printAll() const {
@@ -112,13 +114,11 @@ void RegisterState::printAll() const {
     }
     
     cout << endl << "Special Registers:" << endl;
-    cout << "PC: 0x" << hex << setw(8) << setfill('0') << pc << endl;
-    cout << "IR: 0x" << hex << setw(8) << setfill('0') << ir << endl;
+    cout << "PC: 0x" << hex << setw(8) << setfill('0') << pc << dec << endl;
+    cout << "IR: 0x" << hex << setw(8) << setfill('0') << ir << dec << endl;
     
     cout << endl << "Temporary Registers:" << endl;
     for (const auto& reg : tempReg) {
-        cout << reg.first << ": 0x" << hex << setw(8) << setfill('0') << reg.second << endl;
+        cout << reg.first << ": 0x" << hex << setw(8) << setfill('0') << reg.second << dec << endl;
     }
-    
-    cout << dec;
 }

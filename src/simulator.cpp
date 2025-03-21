@@ -156,11 +156,10 @@ Simulator::DecodedInstruction Simulator::decode() {
             cout << "Unknown instruction with opcode 0x" << hex << decodedInst.opcode << dec << endl;
             break;
     }
-    regState.setTemp("RA", getGen(decodedInst.rs1));
-    regState.setTemp("RB", getGen(decodedInst.rs2));
+    regState.setTemp("RA", regState.getGen(decodedInst.rs1));
+    regState.setTemp("RB", regState.getGen(decodedInst.rs2));
     regState.setTemp("IMM", decodedInst.imm);
-    regState.setTemp("RM",getGen(decodedInst.rs2));
-
+    regState.setTemp("RM", regState.getGen(decodedInst.rs2));
     return decodedInst;
 }
 
