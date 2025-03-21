@@ -35,7 +35,8 @@ void RegisterState::reset() {
         {"RZ", 0},
         {"MAR", 0},
         {"MDR", 0},
-        {"IMM", 0}
+        {"IMM", 0},
+        {"PC_TEMP", 0}
     };
     cout<<"All Registers Reset to their Default Values!"<<endl;
 }

@@ -66,6 +66,8 @@ void Simulator::fetch() {
     uint32_t pc = regState.getPC();
     uint32_t instruction = memory.readWord(pc);
     regState.setIR(instruction);
+    regState.setPC(pc+4);
+    regState.setTemp("PC_TEMP", pc+4);
 }
 
 // decodes the instruction stored in the IR
