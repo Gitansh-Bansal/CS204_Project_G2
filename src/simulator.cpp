@@ -51,7 +51,7 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction)
 void Simulator::execute(DecodedInstruction& decodedInst) 
 
 void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
-    cout << "\nMEMORY ACCESS:" << endl;
+    cout << "\nMEMORY ACCESS STAGE:" << endl;
     
     uint32_t opcode = decodedInst.opcode;
     uint32_t funct3 = decodedInst.funct3;
@@ -124,4 +124,65 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
 }
 
 
-void Simulator::writeBack(DecodedInstruction& decodedInst)
+void Simulator::writeBack(DecodedInstruction& decodedInst) {
+    cout << "\nWRITE BACK STAGE: " << endl;
+    
+    uint32_t opcode = decodedInst.opcode;
+    uint32_t rd = decodedInst.rd;
+    
+    if (rd == 0) {
+        cout << "Destination register is x0, skipping write back" << endl;
+        return;
+    }
+    
+    int32_t result = regState.getTemp("RY");
+    
+    bool writeToReg = false;
+    
+    switch (opcode) {
+        case 0x33: // ADD, SUB, AND, OR, XOR, SLL, SLT, SRA, SRL, MUL, DIV, REM
+            writeToReg = true;
+            break;
+    
+        case 0x13: // ADDI, ANDI, ORI
+            writeToReg = true;
+            break;
+            
+        case 0x03: // LB, LH, LW, LD
+            writeToReg = true;
+            break;
+            
+        case 0x67: // JALR
+            writeToReg = true;
+            break;
+            
+        case 0x37: // LUI
+            writeToReg = true;
+            break;
+            
+        case 0x17: // AUIPC
+            writeToReg = true;
+            break;
+            
+        case 0x6F: // JAL
+            writeToReg = true;
+            break;
+            
+        case 0x23: // SB, SH, SW, SD
+        case 0x63: // BEQ, BNE, BLT, BGE
+            writeToReg = false;
+            break;
+            
+        default:
+            writeToReg = false;
+            cout << "Unknown opcode for write back stage: 0x" << hex << opcode << dec << endl;
+            break;
+    }
+    
+    if (writeToReg) {
+        regState.setGen(rd, result);
+        // cout << "Wrote value 0x" << hex << result << dec << " to register x" << rd << endl;
+    } else {
+        cout << "No register write back needed for this instruction" << endl;
+    }
+}
