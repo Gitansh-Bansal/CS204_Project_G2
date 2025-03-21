@@ -142,7 +142,77 @@ void Simulator::execute(DecodedInstruction& decodedInst)
             break;
         }
 
-    }   
+        case 0x03: { // LB, LH, LW, LD
+            rz_val = rs1_val + imm_val;
+            regState.setTemp("MAR", rz_val);
+            break;
+            
+        }
+        
+        case 0x67: { // JALR
+            rz_val = pc + 4;
+            next_pc = (rs1_val + imm_val) & ~1; 
+            break;
+        }
+        
+        
+        case 0x23: { // SB, SH, SW, SD
+            rz_val = rs1_val + imm_val;
+            regState.setTemp("MAR", rz_val);
+            break;
+        }
+        
+        case 0x63: { 
+            bool take_branch = false;
+            
+            switch (funct3) {
+                case 0x0: // BEQ
+                    take_branch = (rs1_val == rs2_val);
+                    break;
+                case 0x1: // BNE
+                    take_branch = (rs1_val != rs2_val);
+                    break;
+                case 0x4: // BLT
+                    take_branch = (rs1_val < rs2_val);
+                    break;
+                case 0x5: // BGE
+                    take_branch = (rs1_val >= rs2_val);
+                    break;
+            }
+            
+            if (take_branch) 
+            {
+                next_pc = pc + imm_val;
+            }
+            break;
+        }
+        
+        case 0x37: { // LUI
+            rz_val = imm_val>>12;
+            break;
+           
+        }
+        
+        case 0x17: { // AUIPC
+            imm_val = imm_val << 12;
+            rz_val = pc + imm_val;
+            break;
+        }
+        
+        case 0x6F: { // JAL
+            rz_val = pc + 4; 
+            next_pc = pc + imm_val; 
+            break;
+        }
+        
+        default:
+            cout << "Unknown opcode: 0x" << hex << opcode << dec << endl;
+            break;
+    }
+    
+    regState.setTemp("RZ", rz_val);
+    regState.setTemp("PC", next_pc);
+    
         
         
 }
