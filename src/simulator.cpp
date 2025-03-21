@@ -49,7 +49,105 @@ uint32_t Simulator::fetch()
 Simulator::DecodedInstruction Simulator::decode(uint32_t instruction)
 
 void Simulator::execute(DecodedInstruction& decodedInst) 
+ {
+    cout << "EXECUTE: Performing operation for instruction with opcode 0x" << hex << decodedInst.opcode << dec << endl;
+    
+    uint32_t opcode = decodedInst.opcode;
+    uint32_t funct3 = decodedInst.funct3;
+    uint32_t funct7 = decodedInst.funct7;
+    
+    int32_t rs1_val = regState.getTemp("RA");
+    int32_t rs2_val = regState.getTemp("RB");
+    int32_t imm_val = regState.getTemp("IMM");
 
+    int32_t rz_val = 0;
+    uint32_t next_pc = pc + 4;
+    
+    switch (opcode) 
+    {
+        // R-type instructions
+        case 0x33: 
+        {
+            switch (funct3) 
+            {
+                case 0x0: 
+                    if (funct7 == 0x00) // ADD
+                        rz_val = rs1_val + rs2_val;
+                    else if (funct7 == 0x20) // SUB
+                        rz_val = rs1_val - rs2_val;
+                    else if (funct7 == 0x01) // MUL
+                        rz_val = rs1_val * rs2_val;
+                    break;
+
+                case 0x1: // SLL
+                    rz_val = rs1_val << (rs2_val & 0x1F);
+                    break;
+
+                case 0x2: // SLT
+                    rz_val = (rs1_val < rs2_val) ? 1 : 0;
+                    break;
+
+                case 0x4: 
+                    if (funct7 == 0x00) // XOR
+                        rz_val = rs1_val ^ rs2_val;
+                    else if (funct7 == 0x01) // DIV
+                        rz_val = (rs2_val != 0) ? (rs1_val / rs2_val) : -1;
+                    break;
+
+                case 0x5: 
+                    if (funct7 == 0x00) // SRL
+                        rz_val = static_cast<uint32_t>(rs1_val) >> (rs2_val & 0x1F);
+                    else if (funct7 == 0x20) // SRA
+                        rz_val = rs1_val >> (rs2_val & 0x1F);
+                    break;
+                    
+                case 0x6: 
+                    if (funct7 == 0x00) // OR
+                        rz_val = rs1_val | rs2_val;
+                    else if (funct7 == 0x01) // REM
+                        rz_val = (rs2_val != 0) ? (rs1_val % rs2_val) : rs1_val;
+                    break;
+                        
+                case 0x7: // AND
+                    rz_val = rs1_val & rs2_val;
+                    break;
+
+                default:
+                    cout << "Unknown funct3: 0x" << hex << funct3 << dec << endl;
+                    break;    
+                    
+            }
+            break;
+        }
+        
+        // I-type instructions
+        case 0x13: {
+            
+            switch (funct3) 
+            {
+                case 0x0: // ADDI
+                    rz_val = rs1_val + imm_val;
+                    break;
+                    
+                case 0x7: // ANDI
+                    rz_val = rs1_val & imm_val;
+                    break;
+                case 0x6: // ORI
+                    rz_val = rs1_val | imm_val;
+                    break;
+                default:
+                    cout << "Unknown funct3: 0x" << hex << funct3 << dec << endl;
+                    break;    
+            }
+            break;
+        }
+
+    }   
+        
+        
+}
+
+void Simulator::memoryAccess(DecodedInstruction& decodedInst) 
 void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
     cout << "\nMEMORY ACCESS STAGE:" << endl;
     
