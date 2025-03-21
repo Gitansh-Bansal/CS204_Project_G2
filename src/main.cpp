@@ -1,148 +1,119 @@
 #include <iostream>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <vector>
-#include <iomanip>
-#include <algorithm>
-#include "parser.h"
-#include "encoder.h"
-#include "symboltable.h"
+#include <cstdlib> 
+#include <thread>  
+#include <chrono>
+#ifdef _WIN32
+    #include <conio.h>  
+    #include <windows.h>
+    #define SLEEP(ms) Sleep(ms)
+#else
+    #include <termios.h>
+    #include <fcntl.h>
+    #define SLEEP(ms) std::this_thread::sleep_for(std::chrono::milliseconds(ms))
+#endif
+#include "simulator.h"
 
-int main() {
-    string inputFile = "input.asm";
-    string outputFile = "output.mc";
-    SymbolTable symbolTable;
+using namespace std;
 
-    // -------------------------- FIRST PASS -------------------------
-    cout << "\nFirst pass : Building symbol table..." << endl;
+char getKeyPress() {
+    #ifdef _WIN32
+        if (_kbhit()) return _getch();
+    #else
+        struct termios oldt, newt;
+        tcgetattr(STDIN_FILENO, &oldt);
+        newt = oldt;
+        newt.c_lflag &= ~(ICANON | ECHO);
+        tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    vector<Instruction> instructions = parseFile(inputFile);                     // parse the input file (done in parser.cpp)
-    if (instructions.empty()) {
-        cerr << "Error: No instructions found or file could not be opened." << endl;
-        return 1;
-    }
+        int ch = getchar();
 
-    symbolTable.setCurrentSegment(TEXT);                                          // start with text segment (default)
+        tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+        return ch;
+    #endif
+        return 0;
+}
 
-    // now we go to each instruction, check its type and update the symbol table accordingly
-    for (const auto& instr : instructions) {
-        if (instr.type!=DIRECTIVE) {
-            symbolTable.setCurrentSegment(TEXT);
-        }
-
-        if (instr.hasLabel && instr.type!=DIRECTIVE) {
-            symbolTable.addSymbol(instr.label, symbolTable.getCurrentAddress());  // add label to symbol table
-        }
-        
-        if (instr.type == DIRECTIVE) {
-            if (instr.opcode == ".text") {              
-                symbolTable.setCurrentSegment(TEXT);    // switch to the text segment
-            } else if (instr.opcode == ".data") {       // switch to the data segment
-                symbolTable.setCurrentSegment(DATA);
-            } 
-            else{
-                symbolTable.setCurrentSegment(DATA);
-                if (instr.hasLabel) {
-                    symbolTable.addSymbol(instr.label, symbolTable.getCurrentAddress());     // add label to symbol table
-                }
-
-                // increment address of data cursor based on directive
-                if (instr.opcode == ".byte") {
-                    symbolTable.incrementAddress(instr.operands.size());
-                } else if (instr.opcode == ".half") {
-                    symbolTable.incrementAddress(2 * instr.operands.size());
-                } else if (instr.opcode == ".word") {
-                    symbolTable.incrementAddress(4 * instr.operands.size());
-                } else if (instr.opcode == ".dword") {
-                    symbolTable.incrementAddress(8 * instr.operands.size());
-                } else if (instr.opcode == ".asciiz") {
-                    string str = instr.operands[0];
-                    if (str.size() >= 2 && str.front() == '"' && str.back() == '"') str = str.substr(1, str.size() - 2);    // remove double quotes
-                    
-                    symbolTable.incrementAddress(str.size() + 1);     // +1 for null terminator
-                }
-            }
-        } else if (instr.type != LABEL) {
-            symbolTable.incrementAddress(4);         // if the instruction is not a label or directive, increment address of text cursor by 4
-        }
-    }
-
-    // print the final Symbol Table after completion of first pass
-    cout<<endl;
-    symbolTable.printSymbolTable();
-
-    // -------------------------- SECOND PASS -------------------------
-    cout << "\nSecond pass : Generating machine code..." << endl;
-
-    // reset the data and text cursors to the beginning and reset the segment to text
-    symbolTable.resetCursors();
-    symbolTable.setCurrentSegment(TEXT);
-
-    ofstream outFile(outputFile);          // open the output file
-    if (!outFile.is_open()) {
-        cerr << "Error: Output file " << outputFile << " could not be opened" << endl;
-        return 1;
-    }
-    stringstream memoryStream;             // stream to store the memory contents
-
-    // instruction for termination
-    Instruction instr;
-    instr.type = UNKNOWN;
-    instr.opcode = "terminate";
-    instr.operands = {};
-    instr.label = "";
-    instr.hasLabel = false;
-    instr.lineNumber = 0;
-    instructions.push_back(instr);
-
-    // now we go to each instruction, check its type and generate the machine code accordingly
-    for (const auto& instr : instructions) {
-        uint32_t currentAddress = symbolTable.getCurrentAddress(); // get the current address
-
-        if (instr.type == DIRECTIVE) {
-            if (instr.opcode == ".text") {
-                symbolTable.setCurrentSegment(TEXT); 
-            } else if (instr.opcode == ".data") {
-                symbolTable.setCurrentSegment(DATA); 
-            } else if (instr.opcode == ".byte" || instr.opcode == ".half" || instr.opcode == ".word" || instr.opcode == ".dword" || instr.opcode == ".asciiz") {
-                symbolTable.setCurrentSegment(DATA); 
-                currentAddress = symbolTable.getCurrentAddress(); 
-                vector<uint8_t> data = encodeDirective(instr);               // returns a vector of bytes containing the data to be added to the data memory
-
-                // write the data to the output file
-                for (size_t i = 0; i < data.size(); i++) { 
-                    memoryStream << intToHex(currentAddress + i) << " 0x";
-                    memoryStream << hex << right <<setw(2) << setfill('0') << static_cast<int>(data[i]);
-                    memoryStream << endl;
-                }
-                symbolTable.incrementAddress(data.size());                   // increment the address of the data cursor
-            }
-        }
-        else if (instr.type != LABEL && instr.type != UNKNOWN) {             // if the instruction is a normal text instruction
-            symbolTable.setCurrentSegment(TEXT);                             // switch to the text segment
-
-            currentAddress = symbolTable.getCurrentAddress(); 
-            uint32_t machineCode = encodeInstruction(instr, currentAddress, symbolTable);         // generate the machine code for the instruction (done in encoder.cpp)
-            string encodingComment = generateEncodingComment(instr, machineCode);                 // generate the encoding comment for the instruction (done in encoder.cpp)
-
-            string outputLine = formatOutputLine(currentAddress, machineCode, instr, encodingComment); // format the output line according to the format
-            outFile << outputLine << endl; 
-            
-            symbolTable.incrementAddress(4); // increment the address of the text cursor
-        }
-        else if (instr.type == UNKNOWN && instr.opcode == "terminate") {
-            symbolTable.setCurrentSegment(TEXT); 
-            currentAddress = symbolTable.getCurrentAddress(); 
-            uint32_t machineCode = -1;                                         // generate the machine code for the instruction (done in encoder.cpp)
-            string encodingComment = "Terminate";                              // generate the encoding comment for the instruction (done in encoder.cpp)
-            outFile << formatOutputLine(currentAddress, machineCode, instr, encodingComment) << endl;    // write the output line to the output file
-            break;
-        }
-    }
+bool generateMachineCode() {
+    cout << "\n[Phase 1] Generating Machine Code..." << endl;
     
-    outFile << endl << memoryStream.str(); // write the data memory contents to the output file
-    outFile.close();
-    cout << "Output successfully written to " << outputFile << endl << endl;
+    #ifdef _WIN32
+        int status = system("generate_mc.exe"); 
+    #else
+        int status = system("./generate_mc"); 
+    #endif
+
+    if (status != 0) {
+        cerr << "Error: Machine code generation failed!" << endl;
+        return false;
+    }
+    cout << "Machine code successfully generated in 'output.mc'.\n" << endl;
+    return true;
+}
+
+void runConsole(Simulator& simulator) {
+    bool running = true;
+
+    while (running) {
+        cout << "\n------------------- MENU -------------------" << endl;
+        cout << "[R] Run  |  [S] Step  |  [E] Exit  |  [V] View Registers  |  [M] View Memory" << endl;
+        cout << "--------------------------------------------" << endl;
+        cout << "Press a key to choose an option... ";
+
+        while (true) {
+            char choice = getKeyPress();
+            if (choice) {
+                choice = toupper(choice);
+                cout << choice << endl;
+                switch (choice) {
+                    case 'R':
+                        cout << "\nRunning simulation...\n";
+                        simulator.run();
+                        break;
+
+                    case 'S':
+                        cout << "\nExecuting one instruction...\n";
+                        simulator.step();
+                        break;
+
+                    case 'E':
+                        cout << "\nExiting simulation...\n";
+                        running = false;
+                        return;
+
+                    case 'V':
+                        cout << "\nRegister States:\n";
+                        simulator.printRegisters();
+                        break;
+
+                    case 'M': {
+                        uint32_t start, end;
+                        cout << "Enter memory range (start end): ";
+                        cin >> hex >> start >> end;
+                        simulator.printMemory(start, end);
+                        break;
+                    }
+
+                    default:
+                        cout << "Invalid choice! Press R, S, E, V, or M.\n";
+                }
+                break; 
+            }
+            SLEEP(10);
+        }
+    }
+}
+
+int main(int argc, char** argv) {
+    if (!generateMachineCode()) return 1; 
+
+    cout << "\n[Phase 2] Initializing RISC-V Simulator...\n" << endl;
+    Simulator simulator;
+    cout<<"afecsasCdseafVc"<<endl;
+    if (!simulator.loadProgram("output.mc")) {
+        cerr << "Error: Failed to load machine code into memory." << endl;
+        return 1;
+    }
+
+    runConsole(simulator);
     return 0;
 }
