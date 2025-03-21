@@ -44,6 +44,18 @@ uint32_t Simulator::getClock() const {
     return clock;
 }
 
+void Simulator::printRegisters() const {
+    regState.printAll();
+}
+
+void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr) const {
+    if (start_addr > end_addr || start_addr<0 || end_addr>0xFFFFFFFF) {
+        cout << "Invalid memory range!" << endl;
+        return;
+    }
+    memory.printMemory(start_addr, end_addr);
+}
+
 // read the instruction stored at the pc and 
 // store it in IR (does not return anything)
 uint32_t Simulator::fetch() {

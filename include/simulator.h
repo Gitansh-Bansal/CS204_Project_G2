@@ -35,6 +35,8 @@ public:
     Simulator();
     void reset();
     bool loadProgram(const string& filename);
+    void printRegisters() const;
+    void printMemory() const;
     void run();
     void step();
     bool isRunning() const;
