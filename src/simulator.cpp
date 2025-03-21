@@ -44,9 +44,106 @@ uint32_t Simulator::getClock() const {
     return clock;
 }
 
-uint32_t Simulator::fetch() 
+// read the instruction stored at the pc and 
+// store it in IR (does not return anything)
+void Simulator::fetch() {
+    uint32_t pc = regState.getPC();
+    uint32_t instruction = memory.readWord(pc);
+    regState.setIR(instruction);
+}
 
-Simulator::DecodedInstruction Simulator::decode(uint32_t instruction)
+// decodes the instruction stored in the IR
+// returns a DecodedInstruction
+Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
+    DecodedInstruction decodedInst;
+
+    decodedInst.opcode = instruction & 0x7F;
+
+    switch(decodedInst.opcode) {
+        case(0x33):
+            decodedInst.type = R_TYPE;
+            decodedInst.rd     = (instruction >> 7)  & 0x1F;
+            decodedInst.funct3 = (instruction >> 12) & 0x07;
+            decodedInst.rs1    = (instruction >> 15) & 0x1F;
+            decodedInst.rs2    = (instruction >> 20) & 0x1F;
+            decodedInst.funct7 = (instruction >> 25) & 0x7F;
+            break;
+        case(0x13):
+            decodedInst.type = I_TYPE;
+            decodedInst.rd     = (instruction >> 7)  & 0x1F;
+            decodedInst.funct3 = (instruction >> 12) & 0x07;
+            decodedInst.rs1    = (instruction >> 15) & 0x1F;
+            decodedInst.imm = (instruction >> 20) & 0xFFF;
+            if (decodedInst.imm & 0x800)
+                decodedInst.imm |= 0xFFFFF000;
+            break;
+        case(0x03):  // load instructions
+            decodedInst.type = I_TYPE;
+            decodedInst.rd     = (instruction >> 7)  & 0x1F;
+            decodedInst.funct3 = (instruction >> 12) & 0x07;
+            decodedInst.rs1    = (instruction >> 15) & 0x1F;
+            decodedInst.imm = (instruction >> 20) & 0xFFF;
+            if (decodedInst.imm & 0x800)
+                decodedInst.imm |= 0xFFFFF000;
+            break;
+        case(0x23):
+            decodedInst.type = S_TYPE;
+            decodedInst.imm = (instruction >> 7) & 0x1F;
+            decodedInst.funct3 = (instruction >> 12) & 0x07;
+            decodedInst.rs1    = (instruction >> 15) & 0x1F;
+            decodedInst.rs2    = (instruction >> 20) & 0x1F;
+            decodedInst.imm |= ((instruction >> 25) & 0x7F) << 5;
+            if (decodedInst.imm & 0x800)
+                decodedInst.imm |= 0xFFFFF000;
+            break;
+        case(0x63):
+            decodedInst.type = SB_TYPE;
+            decodedInst.funct3 = (instruction >> 12) & 0x07;
+            decodedInst.rs1 = (instruction >> 15) & 0x1F;
+            decodedInst.rs2 = (instruction >> 20) & 0x1F;
+            decodedInst.imm = ((instruction >> 31) & 0x1) << 12 |
+                             ((instruction >> 25) & 0x3F) << 5 |
+                             ((instruction >> 8) & 0xF) << 1 |
+                             ((instruction >> 7) & 0x1) << 11;
+            if (decodedInst.imm & 0x1000)
+                decodedInst.imm |= 0xFFFFE000;
+            break;
+        case(0x6F):  
+            decodedInst.type = UJ_TYPE;
+            decodedInst.rd     = (instruction >> 7) & 0x1F;
+            decodedInst.imm    = ((instruction >> 12) & 0xFF) << 12;  
+            decodedInst.imm   |= ((instruction >> 20) & 0x1) << 11;   
+            decodedInst.imm   |= ((instruction >> 21) & 0x3FF) << 1; 
+            decodedInst.imm   |= ((instruction >> 31) & 0x1) << 20; 
+            if (decodedInst.imm & 0x100000)
+                decodedInst.imm |= 0xFFF00000;
+            break;
+        case(0x67):  // jalr
+            decodedInst.type = I_TYPE;
+            decodedInst.rd     = (instruction >> 7) & 0x1F;
+            decodedInst.funct3 = (instruction >> 12) & 0x07;
+            decodedInst.rs1    = (instruction >> 15) & 0x1F;
+            decodedInst.imm    = (instruction >> 20) & 0xFFF;
+            if (decodedInst.imm & 0x800)
+                decodedInst.imm |= 0xFFFFF000;
+            break;
+        case(0x37):  // lui
+            decodedInst.type = U_TYPE;
+            decodedInst.rd     = (instruction >> 7) & 0x1F;
+            decodedInst.imm    = (instruction & 0xFFFFF000);
+            break;
+        case(0x17):  // auipc
+            decodedInst.type = U_TYPE;
+            decodedInst.rd     = (instruction >> 7) & 0x1F;
+            decodedInst.imm    = (instruction & 0xFFFFF000);
+            break;
+        default:     // Unknown instruction
+            decodedInst.type = UNKNOWN;
+            break;
+    }
+
+    return decodedInst;
+}
 
 void Simulator::execute(DecodedInstruction& decodedInst) 
  {

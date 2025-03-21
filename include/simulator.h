@@ -6,6 +6,7 @@
 #include <vector>
 #include "memory.h"
 #include "register_state.h"
+#include "parser.h"
 using namespace std;
 
 class Simulator {
@@ -15,13 +16,14 @@ private:
     uint32_t pc;
     uint32_t clock;
 
-    uint32_t fetch();
+    void fetch();
 
     struct DecodedInstruction {
-        uint8_t opcode;
-        int rd, rs1, rs2;
-        int funct3, funct7;
-        int32_t imm;
+        uint8_t opcode = 0;
+        InstructionType type = UNKNOWN;
+        int rd=0, rs1=0, rs2=0;
+        int funct3=0, funct7=0;
+        int32_t imm=0;
     };
     
     DecodedInstruction decode(uint32_t instruction);
