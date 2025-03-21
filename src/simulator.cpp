@@ -46,10 +46,11 @@ uint32_t Simulator::getClock() const {
 
 // read the instruction stored at the pc and 
 // store it in IR (does not return anything)
-void Simulator::fetch() {
+uint32_t Simulator::fetch() {
     uint32_t pc = regState.getPC();
     uint32_t instruction = memory.readWord(pc);
     regState.setIR(instruction);
+    return instruction;
 }
 
 // decodes the instruction stored in the IR
@@ -61,7 +62,6 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
 
     switch(decodedInst.opcode) {
         case(0x33):
-            decodedInst.type = R_TYPE;
             decodedInst.rd     = (instruction >> 7)  & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
@@ -69,7 +69,6 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
             decodedInst.funct7 = (instruction >> 25) & 0x7F;
             break;
         case(0x13):
-            decodedInst.type = I_TYPE;
             decodedInst.rd     = (instruction >> 7)  & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
@@ -78,7 +77,6 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
                 decodedInst.imm |= 0xFFFFF000;
             break;
         case(0x03):  // load instructions
-            decodedInst.type = I_TYPE;
             decodedInst.rd     = (instruction >> 7)  & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
@@ -87,7 +85,6 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
                 decodedInst.imm |= 0xFFFFF000;
             break;
         case(0x23):
-            decodedInst.type = S_TYPE;
             decodedInst.imm = (instruction >> 7) & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
@@ -97,7 +94,6 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
                 decodedInst.imm |= 0xFFFFF000;
             break;
         case(0x63):
-            decodedInst.type = SB_TYPE;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1 = (instruction >> 15) & 0x1F;
             decodedInst.rs2 = (instruction >> 20) & 0x1F;
@@ -109,7 +105,6 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
                 decodedInst.imm |= 0xFFFFE000;
             break;
         case(0x6F):  
-            decodedInst.type = UJ_TYPE;
             decodedInst.rd     = (instruction >> 7) & 0x1F;
             decodedInst.imm    = ((instruction >> 12) & 0xFF) << 12;  
             decodedInst.imm   |= ((instruction >> 20) & 0x1) << 11;   
@@ -119,7 +114,6 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
                 decodedInst.imm |= 0xFFF00000;
             break;
         case(0x67):  // jalr
-            decodedInst.type = I_TYPE;
             decodedInst.rd     = (instruction >> 7) & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
@@ -128,17 +122,15 @@ Simulator::DecodedInstruction Simulator::decode(uint32_t instruction) {
                 decodedInst.imm |= 0xFFFFF000;
             break;
         case(0x37):  // lui
-            decodedInst.type = U_TYPE;
             decodedInst.rd     = (instruction >> 7) & 0x1F;
             decodedInst.imm    = (instruction & 0xFFFFF000);
             break;
         case(0x17):  // auipc
-            decodedInst.type = U_TYPE;
             decodedInst.rd     = (instruction >> 7) & 0x1F;
             decodedInst.imm    = (instruction & 0xFFFFF000);
             break;
         default:     // Unknown instruction
-            decodedInst.type = UNKNOWN;
+            cout << "Unknown instruction with opcode 0x" << hex << decodedInst.opcode << dec << endl;
             break;
     }
 
@@ -378,11 +370,11 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
         }
         
         default:
-            regState.tempReg["RY"] = regState.tempReg["RZ"];
+            regState.setTemp("RY", regState.getTemp("RZ"));
             break;
     }
     
-    pc = regState.tempReg["PC"];
+    pc = regState.getTemp("PC");
 }
 
 
