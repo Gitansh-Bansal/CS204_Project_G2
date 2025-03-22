@@ -53,12 +53,7 @@ void Simulator::printRegisters() const {
 }
 
 void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr) const{
-    int flg=0;
-    if (start_addr > end_addr || start_addr<0 || end_addr>0xFFFFFFFF) {
-        cout << "Invalid memory range!" << endl;
-        flg=1;
-    }
-    if (flg==0) memory.printMemory(start_addr, end_addr);
+    memory.printMemory(start_addr, end_addr);
 }
 
 // read the instruction stored at the pc and 

@@ -64,7 +64,8 @@ void runConsole(Simulator& simulator) {
             if (choice) {
                 choice = toupper(choice);
                 cout << choice << endl;
-                switch (choice) {
+                switch (choice) 
+                {
                     case 'R':
                         cout << "\nRunning simulation...\n";
                         simulator.run();
@@ -85,14 +86,26 @@ void runConsole(Simulator& simulator) {
                         simulator.printRegisters();
                         break;
 
-                    case 'M': {
+                    case 'M': 
+                    {
                         uint32_t start=0, end=0;
+                   
                         cout << "Enter memory range (start end): ";
                         cin >> hex >> start >> end;
-                        simulator.printMemory(start, end);
+                
+                        if (cin.fail() || start > end || start < 0 || end > 0xFFFFFFFF)
+                        {  
+                            cin.clear();  
+                            cin.ignore(numeric_limits<streamsize>::max(), '\n');  
+                            cout << "Invalid input. Please enter a valid memory range.\n";
+                        } 
+                        else 
+                        {
+                            simulator.printMemory(start, end);
+                        }
                         break;
                     }
-
+                        
                     default:
                         cout << "Invalid choice! Press R, S, E, V, or M.\n";
                 }

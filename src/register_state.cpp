@@ -103,7 +103,7 @@ void RegisterState::setTemp(const string& reg_name, int32_t val) {
 void RegisterState::printAll() const {
     cout << "General Purpose Registers:" << endl;
     for (uint32_t i = 0; i < 32; i++) {
-        cout << "x" << i << ": 0x" << hex << setw(8) << setfill('0') << getGen(i);
+        cout << "x" << dec <<i << ": 0x" << hex << setw(8) << setfill('0') << getGen(i);
         
         // Print 4 registers per line
         if ((i + 1) % 4 == 0) {
