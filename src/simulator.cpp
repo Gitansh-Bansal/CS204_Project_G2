@@ -27,7 +27,7 @@ void Simulator::run() {
 }
 
 void Simulator::step() {
-    cout << "\n===== Cycle " << clock << " =====" << endl;
+    cout << "\n===== Cycle " << dec << clock << " =====" << endl;
 
     // 5 stages of the execution
     fetch();
@@ -52,12 +52,13 @@ void Simulator::printRegisters() const {
     regState.printAll();
 }
 
-void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr) const {
+void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr) const{
+    int flg=0;
     if (start_addr > end_addr || start_addr<0 || end_addr>0xFFFFFFFF) {
         cout << "Invalid memory range!" << endl;
-        return;
+        flg=1;
     }
-    memory.printMemory(start_addr, end_addr);
+    if (flg==0) memory.printMemory(start_addr, end_addr);
 }
 
 // read the instruction stored at the pc and 
@@ -258,7 +259,7 @@ void Simulator::execute(DecodedInstruction& decodedInst)
 
         case 0x03: { // LB, LH, LW, LD
             rz_val = rs1_val + imm_val;
-            regState.setTemp("MAR", rz_val);
+            //regState.setTemp("MAR", rz_val);
             break;
             
         }
@@ -272,7 +273,7 @@ void Simulator::execute(DecodedInstruction& decodedInst)
         
         case 0x23: { // SB, SH, SW, SD
             rz_val = rs1_val + imm_val;
-            regState.setTemp("MAR", rz_val);
+            //regState.setTemp("MAR", rz_val);
             break;
         }
         
@@ -302,13 +303,12 @@ void Simulator::execute(DecodedInstruction& decodedInst)
         }
         
         case 0x37: { // LUI
-            rz_val = imm_val<<12;
+            rz_val = imm_val;
             break;
            
         }
         
         case 0x17: { // AUIPC
-            imm_val = imm_val << 12;
             rz_val = regState.getPC() + imm_val;
             break;
         }
@@ -331,17 +331,14 @@ void Simulator::execute(DecodedInstruction& decodedInst)
 void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
     cout << "\nMEMORY ACCESS STAGE:" << endl;
     
-    regState.setTemp("MDR", regState.getTemp("RM"));
-    regState.setTemp("MAR", regState.getTemp("RZ"));
-
     uint32_t opcode = decodedInst.opcode;
     uint32_t funct3 = decodedInst.funct3;
     
-    uint32_t address = regState.getTemp("MAR");
-    
     switch (opcode) {
         case 0x03: {
-            
+            regState.setTemp("MDR", regState.getTemp("RM"));
+            regState.setTemp("MAR", regState.getTemp("RZ"));
+            uint32_t address = regState.getTemp("MAR");
             switch (funct3) {
                 case 0x0: 
                     regState.setTemp("MDR",static_cast<int32_t>(static_cast<int8_t>(memory.readByte(address))));
@@ -363,8 +360,10 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
             break;
         }
         case 0x23: {
-            uint32_t data = regState.getTemp("RB");
-            
+            regState.setTemp("MDR", regState.getTemp("RM"));
+            regState.setTemp("MAR", regState.getTemp("RZ"));
+            uint32_t address = regState.getTemp("MAR");
+            uint32_t data = regState.getTemp("MDR");
             switch (funct3) {
                 case 0x0: 
                     memory.writeByte(address, data & 0xFF);

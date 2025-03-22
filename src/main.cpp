@@ -86,7 +86,7 @@ void runConsole(Simulator& simulator) {
                         break;
 
                     case 'M': {
-                        uint32_t start, end;
+                        uint32_t start=0, end=0;
                         cout << "Enter memory range (start end): ";
                         cin >> hex >> start >> end;
                         simulator.printMemory(start, end);
@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 
     cout << "\n[Phase 2] Initializing RISC-V Simulator...\n" << endl;
     Simulator simulator;
-    cout<<"afecsasCdseafVc"<<endl;
+    //cout<<"afecsasCdseafVc"<<endl;
     if (!simulator.loadProgram("output.mc")) {
         cerr << "Error: Failed to load machine code into memory." << endl;
         return 1;
