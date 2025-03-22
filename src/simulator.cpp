@@ -68,7 +68,7 @@ void Simulator::fetch() {
     }
     uint32_t instruction = memory.readWord(PC);
     if (instruction == 0) {
-        cout << "ERROR : Invalid instruction at PC " << regState.getPC() << endl;
+        cout << "ERROR : Invalid instruction at PC 0x" << hex << regState.getPC() << endl;
         regState.setIR(0xFFFFFFFF);
         return;
     }
