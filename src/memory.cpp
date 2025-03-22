@@ -113,36 +113,57 @@ void Memory::printMemory(uint32_t start_addr, uint32_t end_addr, char format) co
         return;
     }
     cout << endl;
-
+    start_addr -= start_addr % 4; // Align to word boundary
+    end_addr += 4 - end_addr % 4; // Align to word boundary
+    // add a header |Address| +3 | +2 | +1 | +0 |
+    if (format == 'h') {
+        cout << "|  Address  | +3 | +2 | +1 | +0 |" << endl;
+        cout << "|-----------|----|----|----|----|" << endl;
+    } else if (format == 'a') {
+        cout << "|  Address  |  +3  |  +2  |  +1  |  +0  |" << endl;
+        cout << "|-----------|------|------|------|------|" << endl;
+    } else if (format == 'd') {
+        cout << "|  Address  |  +3 |  +2 |  +1 |  +0 |" << endl;
+        cout << "|-----------|-----|-----|-----|-----|" << endl;
+    } else {
+        cerr << "Error: Invalid format!" << endl;
+        return;
+    }
     // Iterate in reverse order
     for (uint32_t addr = end_addr; addr >= start_addr; addr -= 4) {
-        cout << "0x" << hex << setw(8) << setfill('0') << addr << ": ";
+        cout << "| 0x" << hex << setw(8) << setfill('0') << addr << "| ";
 
         // Print hex values
         if (format == 'h') {
-            for (int i = 3; i >= 0; i--) { // ✅ Reverse byte order within word
+            for (int i = 3; i >= 0; i--) { 
                 cout << setw(2) << setfill('0') 
-                     << static_cast<int>(readByte(addr + i)) << " ";
+                     << static_cast<int>(readByte(addr + i)) << " | ";
             }
         }  
+
         // Print ASCII or hex if not valid
         else if (format == 'a') {
-            for (int i = 3; i >= 0; i--) { // ✅ Reverse byte order within word
+            for (int i = 3; i >= 0; i--) { 
                 uint8_t byte = readByte(addr + i);
                 if (byte >= 32 && byte <= 126) {
-                    cout << static_cast<char>(byte) << " ";
+                    cout << "   " << static_cast<char>(byte) << " | ";
                 } else {
                     cout << "0x" << hex << setw(2) << setfill('0') 
-                         << static_cast<int>(byte) << " ";
+                         << static_cast<int>(byte) << " | ";
                 }
             }
         }
+
         // Print decimal
         else if (format == 'd') {
-            for (int i = 3; i >= 0; i--) { // ✅ Reverse byte order within word
-                cout << dec << setw(3) << setfill(' ') 
-                     << static_cast<int>(readByte(addr + i)) << " ";
+            for (int i = 3; i >= 0; i--) { 
+                int8_t signedByte = static_cast<int8_t>(readByte(addr + i)); // ✅ Correct sign extension
+                cout << dec << setw(3) << setfill(' ') << static_cast<int>(signedByte) << " | ";
             }
+        }
+        else {
+            cerr << "Error: Invalid format!" << endl;
+            return;
         }
 
         cout << endl;
