@@ -28,7 +28,7 @@ public:
     
     bool loadFromFile(const string& filename);        // load memory contents from .mc fil
     
-    void printMemory(uint32_t start_addr, uint32_t end_addr) const;    // print memory contents for debugging
+    void printMemory(uint32_t start_addr, uint32_t end_addr, char format) const;    // print memory contents for debugging
 };
 
 #endif

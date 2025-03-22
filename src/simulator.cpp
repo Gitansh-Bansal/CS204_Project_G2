@@ -52,8 +52,8 @@ void Simulator::printRegisters() const {
     regState.printAll();
 }
 
-void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr) const{
-    memory.printMemory(start_addr, end_addr);
+void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr, char format) const{
+    memory.printMemory(start_addr, end_addr, format);
 }
 
 // read the instruction stored at the pc and 

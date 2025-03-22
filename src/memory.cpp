@@ -87,11 +87,14 @@ bool Memory::loadFromFile(const string& filename) {
             
             if (value <= 0xFF) 
             {
-                writeByte(address, static_cast<uint8_t>(value));
+                memoryMap[address] = value;
             }
             else
             {
-                writeWord(address, value);
+                memoryMap[address] = ((value >> 0) & 0xFF);
+                memoryMap[address + 1] = ((value >> 8) & 0xFF);
+                memoryMap[address + 2] = ((value >> 16) & 0xFF);
+                memoryMap[address + 3] = ((value >> 24) & 0xFF);
             }
         } catch (const exception& e) {
             cerr << "Error parsing line: " << line << endl;
@@ -103,34 +106,46 @@ bool Memory::loadFromFile(const string& filename) {
     return true;
 }
 
-void Memory::printMemory(uint32_t start_addr, uint32_t end_addr) const {
-    
-    cout << "Memory dump from 0x" << hex << start_addr 
-              << " to 0x" << end_addr << ":" << endl;
-    
-    for (uint32_t addr = start_addr; addr <= end_addr; addr += 16) {
+void Memory::printMemory(uint32_t start_addr, uint32_t end_addr, char format) const {
+    // Ensure valid range
+    if (start_addr > end_addr) {
+        cerr << "Error: Invalid memory range!" << endl;
+        return;
+    }
+
+    // Iterate in reverse order
+    for (uint32_t addr = end_addr; addr >= start_addr; addr -= 4) {
         cout << "0x" << hex << setw(8) << setfill('0') << addr << ": ";
-        
+
         // Print hex values
-        for (int i = 0; i < 16; i++) {
-            cout << setw(2) << setfill('0') 
-                      << static_cast<int>(readByte(addr + i)) << " ";
-            if (i == 7) {
-                cout << " ";  
+        if (format == 'h') {
+            for (int i = 3; i >= 0; i--) { // ✅ Reverse byte order within word
+                cout << setw(2) << setfill('0') 
+                     << static_cast<int>(readByte(addr + i)) << " ";
+            }
+        }  
+        // Print ASCII representation
+        else if (format == 'a') {
+            for (int i = 3; i >= 0; i--) { // ✅ Reverse byte order within word
+                uint8_t byte = readByte(addr + i);
+                char c = (byte >= 32 && byte <= 126) ? static_cast<char>(byte) : '.';
+                cout << c << " ";
             }
         }
-        
-        // Print ASCII representation
-        cout << " |";
-        for (int i = 0; i < 16; i++) {
-            uint8_t byte = readByte(addr + i);
-            char c = (byte >= 32 && byte <= 126) ? static_cast<char>(byte) : '.';
-            cout << c;
+        // Print decimal
+        else if (format == 'd') {
+            for (int i = 3; i >= 0; i--) { // ✅ Reverse byte order within word
+                cout << dec << setw(3) << setfill('0') 
+                     << static_cast<int>(readByte(addr + i)) << " ";
+            }
         }
-        cout << "|" << endl;
+
+        cout << endl;
+        if (addr < 4) break; // ✅ Prevent underflow when addr = 0
     }
     
     cout << dec; 
 }
+
 
 

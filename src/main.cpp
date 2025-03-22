@@ -88,24 +88,25 @@ void runConsole(Simulator& simulator) {
                         break;
 
                     case 'M': 
-                    {
                         uint32_t start=0, end=0;
                    
-                        cout << "Enter memory range (start end): ";
-                        cin >> hex >> start >> end;
+                        cout << "Enter Start Address: ";
+                        cin >> hex >> start >> endl;
+                        cout << "Enter End Address: ";
+                        cin >> hex >> end >> endl;
                 
-                        if (cin.fail() || start > end || start < 0 || end > 0xFFFFFFFF)
-                        {  
+                        if (cin.fail() || start > end || start < 0 || end > 0xFFFFFFFF){  
                             cin.clear();  
                             cin.ignore(numeric_limits<streamsize>::max(), '\n');  
                             cout << "Invalid input. Please enter a valid memory range.\n";
                         } 
-                        else 
-                        {
-                            simulator.printMemory(start, end);
+                        else {
+                            cout<< "Enter Format (h for hex, d for decimal, a for ascii): ";
+                            char format;
+                            cin >> format;
+                            simulator.printMemory(start, end, format);
                         }
                         break;
-                    }
                         
                     default:
                         cout << "Invalid choice! Press R, S, E, V, or M.\n";
