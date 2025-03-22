@@ -41,6 +41,7 @@ void Simulator::step() {
 }
 
 bool Simulator::isRunning() const {
+    // if (regState.getIR() == 0) return 0;
     return regState.getIR()!=0xffffffff;
 }
 
@@ -66,6 +67,11 @@ void Simulator::fetch() {
         regState.setIR(0xffffffff);
     }
     uint32_t instruction = memory.readWord(PC);
+    if (instruction == 0) {
+        cout << "ERROR : Invalid instruction at PC " << regState.getPC() << endl;
+        regState.setIR(0xFFFFFFFF);
+        return;
+    }
     regState.setIR(instruction);
     regState.setTemp("PC_TEMP", PC+4);
 }
@@ -161,7 +167,8 @@ Simulator::DecodedInstruction Simulator::decode() {
             regState.setTemp("IMM", decodedInst.imm);
             break;
         default:     // Unknown instruction
-            cout << "Unknown instruction with opcode 0x" << hex << decodedInst.opcode << dec << endl;
+            cerr << "Unknown instruction with opcode 0x" << hex << decodedInst.opcode << dec << endl;
+            regState.setIR(0xFFFFFFFF);
             break;
     }
     // regState.setTemp("RA", regState.getGen(decodedInst.rs1));
@@ -237,6 +244,7 @@ void Simulator::execute(DecodedInstruction& decodedInst)
 
                 default:
                     cout << "Unknown funct3: 0x" << hex << funct3 << dec << endl;
+                    regState.setIR(0xFFFFFFFF);
                     break;    
                     
             }
@@ -259,6 +267,7 @@ void Simulator::execute(DecodedInstruction& decodedInst)
                     break;
                 default:
                     cout << "Unknown funct3: 0x" << hex << funct3 << dec << endl;
+                    regState.setIR(0xFFFFFFFF);
                     break;    
             }
             break;
@@ -328,6 +337,7 @@ void Simulator::execute(DecodedInstruction& decodedInst)
         
         default:
             cout << "Unknown opcode: 0x" << hex << opcode << dec << endl;
+            regState.setIR(0xFFFFFFFF);
             break;
     }
     
@@ -358,9 +368,11 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
                     break;
                 case 0x3:
                     cerr << "Error: 64-bit load not supported" << endl;
+                    regState.setIR(0xFFFFFFFF);
                     break;
                 default:
                     cerr << "Unknown load operation (funct3: 0x" << hex << funct3 << ")" << dec << endl;
+                    regState.setIR(0xFFFFFFFF);
                     break;
             }
             regState.setTemp("RY", regState.getTemp("MDR"));
@@ -383,9 +395,11 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
                     break;
                 case 0x3:
                     cerr << "Error: 64-bit store not supported" << endl;
+                    regState.setIR(0xFFFFFFFF);
                     break;
                 default:
                     cerr << "Unknown store operation (funct3: 0x" << hex << funct3 << ")" << dec << endl;
+                    regState.setIR(0xFFFFFFFF);
                     break;
             }
             break;
@@ -450,6 +464,7 @@ void Simulator::writeBack(DecodedInstruction& decodedInst) {
         default:
             writeToReg = false;
             cout << "Unknown opcode for write back stage: 0x" << hex << opcode << dec << endl;
+            regState.setIR(0xFFFFFFFF);
             break;
     }
     
