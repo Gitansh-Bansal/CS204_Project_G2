@@ -40,7 +40,7 @@ bool generateMachineCode() {
     #ifdef _WIN32
         int status = system("generate_mc.exe"); 
     #else
-        int status = system("./generate_mc"); 
+        int status = system("./generate_mc.exe"); 
     #endif
 
     if (status != 0) {
