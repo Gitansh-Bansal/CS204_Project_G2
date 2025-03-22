@@ -88,12 +88,13 @@ void runConsole(Simulator& simulator) {
                         break;
 
                     case 'M': 
+                    {
                         uint32_t start=0, end=0;
                    
                         cout << "Enter Start Address: ";
-                        cin >> hex >> start >> endl;
+                        cin >> hex >> start;
                         cout << "Enter End Address: ";
-                        cin >> hex >> end >> endl;
+                        cin >> hex >> end;
                 
                         if (cin.fail() || start > end || start < 0 || end > 0xFFFFFFFF){  
                             cin.clear();  
@@ -107,7 +108,7 @@ void runConsole(Simulator& simulator) {
                             simulator.printMemory(start, end, format);
                         }
                         break;
-                        
+                    }
                     default:
                         cout << "Invalid choice! Press R, S, E, V, or M.\n";
                 }
@@ -123,7 +124,7 @@ int main(int argc, char** argv) {
 
     cout << "\n[Phase 2] Initializing RISC-V Simulator...\n" << endl;
     Simulator simulator;
-    //cout<<"afecsasCdseafVc"<<endl;
+    
     if (!simulator.loadProgram("output.mc")) {
         cerr << "Error: Failed to load machine code into memory." << endl;
         return 1;

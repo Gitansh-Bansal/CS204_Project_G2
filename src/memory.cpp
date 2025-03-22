@@ -112,6 +112,7 @@ void Memory::printMemory(uint32_t start_addr, uint32_t end_addr, char format) co
         cerr << "Error: Invalid memory range!" << endl;
         return;
     }
+    cout << endl;
 
     // Iterate in reverse order
     for (uint32_t addr = end_addr; addr >= start_addr; addr -= 4) {
@@ -124,18 +125,22 @@ void Memory::printMemory(uint32_t start_addr, uint32_t end_addr, char format) co
                      << static_cast<int>(readByte(addr + i)) << " ";
             }
         }  
-        // Print ASCII representation
+        // Print ASCII or hex if not valid
         else if (format == 'a') {
             for (int i = 3; i >= 0; i--) { // ✅ Reverse byte order within word
                 uint8_t byte = readByte(addr + i);
-                char c = (byte >= 32 && byte <= 126) ? static_cast<char>(byte) : '.';
-                cout << c << " ";
+                if (byte >= 32 && byte <= 126) {
+                    cout << static_cast<char>(byte) << " ";
+                } else {
+                    cout << "0x" << hex << setw(2) << setfill('0') 
+                         << static_cast<int>(byte) << " ";
+                }
             }
         }
         // Print decimal
         else if (format == 'd') {
             for (int i = 3; i >= 0; i--) { // ✅ Reverse byte order within word
-                cout << dec << setw(3) << setfill('0') 
+                cout << dec << setw(3) << setfill(' ') 
                      << static_cast<int>(readByte(addr + i)) << " ";
             }
         }
