@@ -2,6 +2,7 @@
 #include <cstdlib> 
 #include <thread>  
 #include <chrono>
+#include <unistd.h>
 #ifdef _WIN32
     #include <conio.h>  
     #include <windows.h>

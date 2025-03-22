@@ -86,22 +86,26 @@ Simulator::DecodedInstruction Simulator::decode() {
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
             decodedInst.rs2    = (instruction >> 20) & 0x1F;
             decodedInst.funct7 = (instruction >> 25) & 0x7F;
+            regState.setTemp("RA", regState.getGen(decodedInst.rs1));
+            regState.setTemp("RB", regState.getGen(decodedInst.rs2));
             break;
         case(0x13): // i type
             decodedInst.rd     = (instruction >> 7)  & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
             decodedInst.imm = (instruction >> 20) & 0xFFF;
-            if (decodedInst.imm & 0x800)
-                decodedInst.imm |= 0xFFFFF000;
+            if (decodedInst.imm & 0x800) decodedInst.imm |= 0xFFFFF000;
+            regState.setTemp("RA", regState.getGen(decodedInst.rs1));
+            regState.setTemp("IMM", decodedInst.imm);
             break;
         case(0x03):  // i type load instructions
             decodedInst.rd     = (instruction >> 7)  & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
             decodedInst.imm = (instruction >> 20) & 0xFFF;
-            if (decodedInst.imm & 0x800)
-                decodedInst.imm |= 0xFFFFF000;
+            if (decodedInst.imm & 0x800) decodedInst.imm |= 0xFFFFF000;
+            regState.setTemp("RA", regState.getGen(decodedInst.rs1));
+            regState.setTemp("IMM", decodedInst.imm);
             break;
         case(0x23): // s type
             decodedInst.imm = (instruction >> 7) & 0x1F;
@@ -109,8 +113,11 @@ Simulator::DecodedInstruction Simulator::decode() {
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
             decodedInst.rs2    = (instruction >> 20) & 0x1F;
             decodedInst.imm |= ((instruction >> 25) & 0x7F) << 5;
-            if (decodedInst.imm & 0x800)
-                decodedInst.imm |= 0xFFFFF000;            
+            if (decodedInst.imm & 0x800) decodedInst.imm |= 0xFFFFF000;     
+            regState.setTemp("RA", regState.getGen(decodedInst.rs1));
+            regState.setTemp("RB", regState.getGen(decodedInst.rs2));
+            regState.setTemp("IMM", decodedInst.imm);
+            regState.setTemp("RM", regState.getGen(decodedInst.rs2));
             break;
         case(0x63): // sb type
             decodedInst.funct3 = (instruction >> 12) & 0x07;
@@ -120,8 +127,10 @@ Simulator::DecodedInstruction Simulator::decode() {
                              ((instruction >> 25) & 0x3F) << 5 |
                              ((instruction >> 8) & 0xF) << 1 |
                              ((instruction >> 7) & 0x1) << 11;
-            if (decodedInst.imm & 0x1000)
-                decodedInst.imm |= 0xFFFFE000;
+            if (decodedInst.imm & 0x1000) decodedInst.imm |= 0xFFFFE000;
+            regState.setTemp("RA", regState.getGen(decodedInst.rs1));
+            regState.setTemp("RB", regState.getGen(decodedInst.rs2));
+            regState.setTemp("IMM", decodedInst.imm);
             break;
         case(0x6F): // uj type
             decodedInst.rd     = (instruction >> 7) & 0x1F;
@@ -129,33 +138,36 @@ Simulator::DecodedInstruction Simulator::decode() {
             decodedInst.imm   |= ((instruction >> 20) & 0x1) << 11;   
             decodedInst.imm   |= ((instruction >> 21) & 0x3FF) << 1; 
             decodedInst.imm   |= ((instruction >> 31) & 0x1) << 20; 
-            if (decodedInst.imm & 0x100000)
-                decodedInst.imm |= 0xFFF00000;
+            if (decodedInst.imm & 0x100000) decodedInst.imm |= 0xFFF00000;
+            regState.setTemp("IMM", decodedInst.imm);
             break;
         case(0x67):  // jalr
             decodedInst.rd     = (instruction >> 7) & 0x1F;
             decodedInst.funct3 = (instruction >> 12) & 0x07;
             decodedInst.rs1    = (instruction >> 15) & 0x1F;
             decodedInst.imm    = (instruction >> 20) & 0xFFF;
-            if (decodedInst.imm & 0x800)
-                decodedInst.imm |= 0xFFFFF000;
+            if (decodedInst.imm & 0x800) decodedInst.imm |= 0xFFFFF000;
+            regState.setTemp("RA", regState.getGen(decodedInst.rs1));
+            regState.setTemp("IMM", decodedInst.imm);
             break;
         case(0x37):  // lui
             decodedInst.rd     = (instruction >> 7) & 0x1F;
             decodedInst.imm    = (instruction & 0xFFFFF000);
+            regState.setTemp("IMM", decodedInst.imm);
             break;
         case(0x17):  // auipc
             decodedInst.rd     = (instruction >> 7) & 0x1F;
             decodedInst.imm    = (instruction & 0xFFFFF000);
+            regState.setTemp("IMM", decodedInst.imm);
             break;
         default:     // Unknown instruction
             cout << "Unknown instruction with opcode 0x" << hex << decodedInst.opcode << dec << endl;
             break;
     }
-    regState.setTemp("RA", regState.getGen(decodedInst.rs1));
-    regState.setTemp("RB", regState.getGen(decodedInst.rs2));
-    regState.setTemp("IMM", decodedInst.imm);
-    regState.setTemp("RM", regState.getGen(decodedInst.rs2));
+    // regState.setTemp("RA", regState.getGen(decodedInst.rs1));
+    // regState.setTemp("RB", regState.getGen(decodedInst.rs2));
+    // regState.setTemp("IMM", decodedInst.imm);
+    // regState.setTemp("RM", regState.getGen(decodedInst.rs2));
     return decodedInst;
 }
 
