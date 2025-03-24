@@ -122,9 +122,14 @@ The simulator reads the machine code from `output.mc` and executes instructions 
 
 ## Compilation and Execution
 
-### **To Compile:**
+### **To Compile using direct command:**
 ```sh
 g++ -std=c++17 `wx-config --cxxflags --libs` -o simulator.exe src/*.cpp -Iinclude
+```
+
+### **To compile using Makefile**
+```sh
+make
 ```
 
 ### **To Run:**
