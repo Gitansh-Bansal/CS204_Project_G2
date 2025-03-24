@@ -7,7 +7,6 @@
 - [Input and Output Format](#input-and-output-format)
 - [Working Mechanism](#working-mechanism)
 - [Compilation and Execution](#compilation-and-execution)
-- [Memory Layout](#memory-layout)
 - [Team Members](#team-members)
 
 ---
