@@ -16,6 +16,7 @@
 
 using namespace std;
 
+// Function to get key press from user
 char getKeyPress() {
     #ifdef _WIN32
         if (_kbhit()) return _getch();
@@ -34,6 +35,7 @@ char getKeyPress() {
         return 0;
 }
 
+// Function to generate machine code using the assembler
 bool generateMachineCode() {
     cout << "\n[Phase 1] Generating Machine Code..." << endl;
     
@@ -51,6 +53,7 @@ bool generateMachineCode() {
     return true;
 }
 
+// Function to run the console interface
 void runConsole(Simulator& simulator) {
     bool running = true;
 
@@ -66,27 +69,32 @@ void runConsole(Simulator& simulator) {
                 choice = toupper(choice);
                 cout << choice << endl;
                 switch (choice) 
-                {
+                {   
+                    // Run simulation
                     case 'R':
                         cout << "\nRunning simulation...\n";
                         simulator.run();
                         break;
 
+                    // Execute one instruction    
                     case 'S':
                         cout << "\nExecuting one instruction...\n";
                         simulator.step();
                         break;
 
+                    // Exit simulation    
                     case 'E':
                         cout << "\nExiting simulation...\n";
                         running = false;
                         return;
 
+                    // View register states    
                     case 'V':
                         cout << "\nRegister States:\n";
                         simulator.printRegisters();
                         break;
 
+                    // View memory contents    
                     case 'M': 
                     {
                         uint32_t start=0, end=0;

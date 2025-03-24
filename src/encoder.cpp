@@ -7,6 +7,7 @@
 #include <iostream>
 #include <algorithm>
 #include <bitset>
+#include <limits>
 #include <unordered_map>
 #include <iomanip>
 #include "encoder.h"

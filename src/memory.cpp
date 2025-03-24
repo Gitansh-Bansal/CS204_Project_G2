@@ -5,16 +5,19 @@
 #include <sstream>
 using namespace std;
 
+// Constructor
 Memory::Memory() {
     memoryMap.clear();
     cout << "Memory Initialized!" << endl;
 }
 
+//reset memory
 void Memory::reset() {
     memoryMap.clear();
     cout<<"Memory Cleared."<<endl;
 }
 
+//function to read byte from memory
 uint8_t Memory::readByte(uint32_t address) const {
     auto it = memoryMap.find(address);
     if (it != memoryMap.end()) {
@@ -23,11 +26,13 @@ uint8_t Memory::readByte(uint32_t address) const {
     return 0;
 }
 
+//function to write byte to memory
 void Memory::writeByte(uint32_t address, uint8_t value) {
     memoryMap[address] = value;
     cout<<hex<<"Memory Write: 0x"<<address<<" = 0x"<<(int)value<<endl;
 }
 
+//function to read word from memory
 uint32_t Memory::readWord(uint32_t address) const {
     uint32_t word = 0;
     word |= static_cast<uint32_t>(readByte(address)) << 0;
@@ -37,6 +42,7 @@ uint32_t Memory::readWord(uint32_t address) const {
     return word;
 }
 
+//function to write word to memory
 void Memory::writeWord(uint32_t address, uint32_t value) {
     writeByte(address, (value >> 0) & 0xFF);
     writeByte(address + 1, (value >> 8) & 0xFF);
@@ -44,6 +50,7 @@ void Memory::writeWord(uint32_t address, uint32_t value) {
     writeByte(address + 3, (value >> 24) & 0xFF);
 }
 
+//function to read half word from memory
 uint16_t Memory::readHalf(uint32_t address) const {
     uint16_t half = 0;
     half |= static_cast<uint16_t>(readByte(address)) << 0;
@@ -51,14 +58,17 @@ uint16_t Memory::readHalf(uint32_t address) const {
     return half;
 }
 
+//function to write half word to memory
 void Memory::writeHalf(uint32_t address, uint16_t value) {
     writeByte(address, (value >> 0) & 0xFF);
     writeByte(address + 1, (value >> 8) & 0xFF);
 }
 
+//function to load memory from file
 bool Memory::loadFromFile(const string& filename) {
 
     ifstream file(filename);
+    // Check if file is open
     if (!file.is_open()) {
         cerr << "Error: Could not open file " << filename << endl;
         return false;
@@ -106,6 +116,7 @@ bool Memory::loadFromFile(const string& filename) {
     return true;
 }
 
+//function to print memory
 void Memory::printMemory(uint32_t start_addr, uint32_t end_addr, char format) const {
     // Ensure valid range
     if (start_addr > end_addr) {
@@ -113,8 +124,8 @@ void Memory::printMemory(uint32_t start_addr, uint32_t end_addr, char format) co
         return;
     }
     cout << endl;
-    start_addr -= start_addr % 4; // Align to word boundary
-    end_addr += 4 - end_addr % 4; // Align to word boundary
+    start_addr -= start_addr % 4; 
+    end_addr += 4 - end_addr % 4; 
     // add a header |Address| +3 | +2 | +1 | +0 |
     if (format == 'h') {
         cout << "|  Address  | +3 | +2 | +1 | +0 |" << endl;
@@ -129,6 +140,7 @@ void Memory::printMemory(uint32_t start_addr, uint32_t end_addr, char format) co
         cerr << "Error: Invalid format!" << endl;
         return;
     }
+
     // Iterate in reverse order
     for (uint32_t addr = end_addr; addr >= start_addr; addr -= 4) {
         cout << "| 0x" << hex << setw(8) << setfill('0') << addr << "| ";
@@ -157,7 +169,7 @@ void Memory::printMemory(uint32_t start_addr, uint32_t end_addr, char format) co
         // Print decimal
         else if (format == 'd') {
             for (int i = 3; i >= 0; i--) { 
-                int8_t signedByte = static_cast<int8_t>(readByte(addr + i)); // ✅ Correct sign extension
+                int8_t signedByte = static_cast<int8_t>(readByte(addr + i)); 
                 cout << dec << setw(3) << setfill(' ') << static_cast<int>(signedByte) << " | ";
             }
         }
@@ -167,7 +179,7 @@ void Memory::printMemory(uint32_t start_addr, uint32_t end_addr, char format) co
         }
 
         cout << endl;
-        if (addr < 4) break; // ✅ Prevent underflow when addr = 0
+        if (addr < 4) break; 
     }
     
     cout << dec; 

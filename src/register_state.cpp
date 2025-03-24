@@ -2,6 +2,7 @@
 #include "register_state.h"
 using namespace std;
 
+// Constructor
 RegisterState::RegisterState() {
     regFile.assign(32,0);
     regFile[2] = 0x7FFFFFDC;
@@ -21,6 +22,7 @@ RegisterState::RegisterState() {
     cout << "All Registers Initialized!" << endl;
 }
 
+//function to reset all registers
 void RegisterState::reset() {
     regFile.assign(32, 0);
     regFile[2] = 0x7FFFFFDC;
@@ -41,29 +43,35 @@ void RegisterState::reset() {
     cout << "All Registers Reset to their Default Values!" << endl;
 }
 
+//function to get value of PC
 uint32_t RegisterState::getPC() const {
     return pc;
 }
 
+//function to set value of PC
 void RegisterState::setPC(uint32_t val) {
     pc = val;
     cout << "PC set to 0x" << hex << setw(8) << setfill('0') << val << dec << endl;
 }
 
+//function to increment PC by offset
 void RegisterState::incrementPC(int offset) {
     pc += offset;
     cout << "PC set to 0x" << hex << setw(8) << setfill('0') << pc << dec << endl;
 }
 
+//function to get value of IR
 uint32_t RegisterState::getIR() const {
     return ir;
 }
 
+//function to set value of IR
 void RegisterState::setIR(uint32_t val) {
     ir = val;
     cout << "IR set to 0x" << hex << setw(8) << setfill('0') << val << dec << endl;
 }
 
+//function to get value of general purpose register
 int32_t RegisterState::getGen(uint32_t reg_num) const {
     if (reg_num >= 32) {
         cerr << "Error: Invalid register number: " << reg_num << endl;
@@ -72,6 +80,7 @@ int32_t RegisterState::getGen(uint32_t reg_num) const {
     return regFile[reg_num];
 }
 
+//function to set value of general purpose register
 void RegisterState::setGen(uint32_t reg_num, int32_t val) {
     if (reg_num >= 32) {
         cerr << "Error: Invalid register number: " << reg_num << endl;
@@ -85,6 +94,7 @@ void RegisterState::setGen(uint32_t reg_num, int32_t val) {
          << " written to Register x" << dec << reg_num << endl;
 }
 
+//function to get value of temporary register
 int32_t RegisterState::getTemp(const string& reg_name) const {
     auto it = tempReg.find(reg_name);
     if (it == tempReg.end()) {
@@ -94,12 +104,14 @@ int32_t RegisterState::getTemp(const string& reg_name) const {
     return it->second;
 }
 
+//function to set value of temporary register
 void RegisterState::setTemp(const string& reg_name, int32_t val) {
     tempReg[reg_name] = val;
     cout << "Value 0x" << hex << setw(8) << setfill('0') << val
          << " written to Temporary Register " << reg_name << dec << endl;
 }
 
+//function to print all registers
 void RegisterState::printAll() const {
     cout << "General Purpose Registers:" << endl;
     for (uint32_t i = 0; i < 32; i++) {

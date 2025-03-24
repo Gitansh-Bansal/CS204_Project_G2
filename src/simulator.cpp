@@ -2,12 +2,14 @@
 #include <iostream>
 #include <iomanip>
 
+// Constructor
 Simulator::Simulator() {
     pc=0;
     clock=0;
     cout<<"Simulator initialized!"<<endl;
 }
 
+//funnction to reset the simulator
 void Simulator::reset() {
     regState.reset();
     memory.reset();
@@ -15,17 +17,21 @@ void Simulator::reset() {
     clock = 0;
 }
 
+//function to load program from a file
 bool Simulator::loadProgram(const string& filename) {
     return memory.loadFromFile(filename);
 }
 
+//function to run the simulation
 void Simulator::run() {
+
     while (isRunning()) {
         step();
     }
     cout << "Simulation ended after " << clock << " cycles." << endl;
 }
 
+//function to run single instruction
 void Simulator::step() {
     cout << "\n===== Cycle " << dec << clock << " =====" << endl;
 
@@ -40,25 +46,27 @@ void Simulator::step() {
     clock++;
 }
 
+// function to check if the simulator is running
 bool Simulator::isRunning() const {
-    // if (regState.getIR() == 0) return 0;
     return regState.getIR()!=0xffffffff;
 }
 
+//function to get the current clock cycle
 uint32_t Simulator::getClock() const {
     return clock;
 }
 
+//function to print all registers
 void Simulator::printRegisters() const {
     regState.printAll();
 }
 
+//function to print memory
 void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr, char format) const{
     memory.printMemory(start_addr, end_addr, format);
 }
 
-// read the instruction stored at the pc and 
-// store it in IR (does not return anything)
+//function to fetch instruction
 void Simulator::fetch() {
     cout << "FETCH STAGE:\n";
     uint32_t PC = regState.getPC();
@@ -76,8 +84,7 @@ void Simulator::fetch() {
     regState.setTemp("PC_TEMP", PC+4);
 }
 
-// decodes the instruction stored in the IR
-// returns a DecodedInstruction
+// function to perform decode stage
 Simulator::DecodedInstruction Simulator::decode() {
     uint32_t instruction = regState.getIR();
     cout << "\nDECODE STAGE:\n";
@@ -171,13 +178,11 @@ Simulator::DecodedInstruction Simulator::decode() {
             regState.setIR(0xFFFFFFFF);
             break;
     }
-    // regState.setTemp("RA", regState.getGen(decodedInst.rs1));
-    // regState.setTemp("RB", regState.getGen(decodedInst.rs2));
-    // regState.setTemp("IMM", decodedInst.imm);
-    // regState.setTemp("RM", regState.getGen(decodedInst.rs2));
+
     return decodedInst;
 }
 
+// function to perform execute stage
 void Simulator::execute(DecodedInstruction& decodedInst) 
  {
     cout << "\nEXECUTE:\n";
@@ -345,6 +350,7 @@ void Simulator::execute(DecodedInstruction& decodedInst)
     regState.setPC(next_pc);
 }
 
+// function to perform memory access stage
 void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
     cout << "\nMEMORY ACCESS STAGE:" << endl;
     
@@ -352,21 +358,22 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
     uint32_t funct3 = decodedInst.funct3;
     
     switch (opcode) {
-        case 0x03: {
+        case 0x03: 
+        {
             regState.setTemp("MDR", regState.getTemp("RM"));
             regState.setTemp("MAR", regState.getTemp("RZ"));
             uint32_t address = regState.getTemp("MAR");
             switch (funct3) {
-                case 0x0: 
+                case 0x0: // LB
                     regState.setTemp("MDR",static_cast<int32_t>(static_cast<int8_t>(memory.readByte(address))));
                     break;
-                case 0x1: 
+                case 0x1: // LH
                     regState.setTemp("MDR",static_cast<int32_t>(static_cast<int16_t>(memory.readHalf(address))));
                     break;
-                case 0x2: 
+                case 0x2: // LW
                     regState.setTemp("MDR",static_cast<int32_t>(memory.readWord(address)));
                     break;
-                case 0x3:
+                case 0x3: // LD
                     cerr << "Error: 64-bit load not supported" << endl;
                     regState.setIR(0xFFFFFFFF);
                     break;
@@ -378,22 +385,23 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
             regState.setTemp("RY", regState.getTemp("MDR"));
             break;
         }
-        case 0x23: {
+        case 0x23: 
+        {
             regState.setTemp("MDR", regState.getTemp("RM"));
             regState.setTemp("MAR", regState.getTemp("RZ"));
             uint32_t address = regState.getTemp("MAR");
             uint32_t data = regState.getTemp("MDR");
             switch (funct3) {
-                case 0x0: 
+                case 0x0: // SB
                     memory.writeByte(address, data & 0xFF);
                     break;
-                case 0x1: 
+                case 0x1: // SH
                     memory.writeHalf(address, data & 0xFFFF);
                     break;
-                case 0x2: 
+                case 0x2: // SW
                     memory.writeWord(address, data);
                     break;
-                case 0x3:
+                case 0x3: // SD
                     cerr << "Error: 64-bit store not supported" << endl;
                     regState.setIR(0xFFFFFFFF);
                     break;
@@ -411,7 +419,7 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
     
 }
 
-
+// function to perform write back stage
 void Simulator::writeBack(DecodedInstruction& decodedInst) {
     cout << "\nWRITE BACK STAGE: " << endl;
     
@@ -470,7 +478,6 @@ void Simulator::writeBack(DecodedInstruction& decodedInst) {
     
     if (writeToReg) {
         regState.setGen(rd, result);
-        // cout << "Wrote value 0x" << hex << result << dec << " to register x" << rd << endl;
     } else {
         cout << "No register write back needed for this instruction" << endl;
     }
