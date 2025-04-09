@@ -13,6 +13,8 @@
     #define SLEEP(ms) std::this_thread::sleep_for(std::chrono::milliseconds(ms))
 #endif
 #include "simulator.h"
+#include "generate_mc.h"
+
 
 using namespace std;
 
@@ -33,24 +35,6 @@ char getKeyPress() {
         return ch;
     #endif
         return 0;
-}
-
-// Function to generate machine code using the assembler
-bool generateMachineCode() {
-    cout << "\n[Phase 1] Generating Machine Code..." << endl;
-    
-    #ifdef _WIN32
-        int status = system("generate_mc.exe"); 
-    #else
-        int status = system("./generate_mc.exe"); 
-    #endif
-
-    if (status != 0) {
-        cerr << "Error: Machine code generation failed!" << endl;
-        return false;
-    }
-    cout << "Machine code successfully generated in 'output.mc'.\n" << endl;
-    return true;
 }
 
 // Function to run the console interface
@@ -128,7 +112,8 @@ void runConsole(Simulator& simulator) {
 }
 
 int main(int argc, char** argv) {
-    if (!generateMachineCode()) return 1; 
+    generateMC();
+    cout << "\n[Phase 1] Generating machine code...\n" << endl;
 
     cout << "\n[Phase 2] Initializing RISC-V Simulator...\n" << endl;
     Simulator simulator;
@@ -137,7 +122,14 @@ int main(int argc, char** argv) {
         cerr << "Error: Failed to load machine code into memory." << endl;
         return 1;
     }
-
-    runConsole(simulator);
+    if (argc>1 && string(argv[1])=="--gui"){
+        wxEntryStart(argc, argv);
+        wxTheApp->CallOnInit();
+        wxTheApp->OnRun();
+        wxEntryCleanup();
+    }
+    else{
+        runConsole(simulator);
+    }
     return 0;
 }

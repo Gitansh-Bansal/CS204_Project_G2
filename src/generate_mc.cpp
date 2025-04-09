@@ -8,8 +8,9 @@
 #include "parser.h"
 #include "encoder.h"
 #include "symboltable.h"
+#include "generate_mc.h"
 
-int main() {
+int generateMC() {
     string inputFile = "input.asm";
     string outputFile = "output.mc";
     SymbolTable symbolTable;
