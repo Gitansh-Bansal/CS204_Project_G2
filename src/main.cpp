@@ -3,6 +3,7 @@
 #include <thread>  
 #include <chrono>
 #include <unistd.h>
+#include <wx/wx.h>
 #ifdef _WIN32
     #include <conio.h>  
     #include <windows.h>
