@@ -91,13 +91,25 @@ int32_t parseImmediate(const string& imm, const int& linenum) {
 
     //check if immediate is in hex , binary or decimal
     try {
+        size_t pos;
+        int result;
         if (imm.size() > 2 && imm.substr(0, 2) == "0x") {
-            return stoi(imm.substr(2), nullptr, 16);
+            result =  stoi(imm.substr(2), nullptr, 16, &pos);
+            if (pos != imm.substr(2).size()) {
+                throw std::runtime_error("Invalid immediate value found!!");
+            }
         } 
         if (imm.size() > 2 && imm.substr(0, 2) == "0b") {
-            return stoi(imm.substr(2), nullptr, 2);
+            result =  stoi(imm.substr(2), nullptr, 2, &pos);
+            if (pos != imm.substr(2).size()) {
+                throw std::runtime_error("Invalid immediate value found!!");
+            }      
         }
-        return stoi(imm);
+        result =  stoi(imm, &pos);
+        if (pos != imm.size()) {
+            throw std::runtime_error("Invalid immediate value found!!");
+        }      
+        return result;
     }
     //catch exception if immediate is invalid
     catch (const exception&) {
