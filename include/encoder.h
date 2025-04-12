@@ -26,8 +26,9 @@ string generateEncodingComment(const Instruction& instr, uint32_t machineCode);
 string formatOutputLine(uint32_t addr, uint32_t machineCode, const Instruction& instr, const string& encodingComment);
 
 // helper functions for encoding
-int32_t parseRegister(const string& reg);
-int32_t parseImmediate(const string& imm);
+int32_t parseRegister(const string& reg, const int& linenum);
+int32_t parseImmediate(const string& imm, const int& linenum, bool& running);
+int64_t Immediate_64(const string& imm, const int& linenum, bool& running);
 string intToHex(uint32_t value);
 
 #endif

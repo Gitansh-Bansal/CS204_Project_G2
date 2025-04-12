@@ -219,7 +219,7 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
         if (symbolTable.hasSymbol(instr.operands[2])) {
             imm = symbolTable.getSymbolAddress(instr.operands[2]);
         } else {
-            imm = parseImmediate(instr.operands[2],instr.lineNumber);
+            imm = parseImmediate(instr.operands[2],instr.lineNumber,running);
         }
     }
 
