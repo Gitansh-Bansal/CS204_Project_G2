@@ -96,21 +96,21 @@ int32_t parseImmediate(const string& imm, const int& linenum, bool& running) {
         if (imm.size() > 2 && imm.substr(0, 2) == "0x") {
             result =  stoi(imm.substr(2), &pos, 16);
             if (pos != imm.substr(2).size()) {
-                throw std::runtime_error("Invalid immediate value found!!");
+                throw runtime_error("Invalid immediate value found!!");
             }
             return result;
         } 
         else if (imm.size() > 2 && imm.substr(0, 2) == "0b") {
             result =  stoi(imm.substr(2), &pos, 2);
             if (pos != imm.substr(2).size()) {
-                throw std::runtime_error("Invalid immediate value found!!");
+                throw runtime_error("Invalid immediate value found!!");
             }      
             return result;
         }
         else {
             result =  stoi(imm, &pos);
             if (pos != imm.size()) {
-                throw std::runtime_error("Invalid immediate value found!!");
+                throw runtime_error("Invalid immediate value found!!");
             }      
             return result;
         }
@@ -128,13 +128,27 @@ int64_t Immediate_64(const string& imm, const int& linenum, bool& running) {
 
     //check if immediate is in hex , binary or decimal
     try {
+        size_t pos;
+        long long result;
         if (imm.size() > 2 && imm.substr(0, 2) == "0x") {
-            return stoll(imm.substr(2), nullptr, 16);
+            result = stoll(imm.substr(2), &pos, 16);
+            if (pos != imm.substr(2).size()) {
+                throw runtime_error("Invalid immediate value found!!");
+            }      
+            return result;
         } 
         if (imm.size() > 2 && imm.substr(0, 2) == "0b") {
-            return stoll(imm.substr(2), nullptr, 2);
+            result = stoll(imm.substr(2), &pos, 2);
+            if (pos != imm.substr(2).size()) {
+                throw runtime_error("Invalid immediate value found!!");
+            }      
+            return result;
         }
-        return stoll(imm);
+        result = stoll(imm, &pos);
+        if (pos != imm.size()) {
+            throw runtime_error("Invalid immediate value found!!");
+        }      
+        return result;
     }
     //catch exception if immediate is invalid
     catch (const exception&) {
