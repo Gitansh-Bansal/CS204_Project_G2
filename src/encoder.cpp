@@ -242,7 +242,6 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
     }
 
     if (!running) {
-        cerr << "Error: Invalid immediate value at line " << instr.lineNumber << endl;
         return 0;
     }
     
@@ -286,7 +285,6 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
         return 0;
     }
     if (!running) {
-        cerr << "Error: Invalid immediate value at line " << instr.lineNumber << endl;
         return 0;
     }
     //check if immediate is in range
@@ -373,7 +371,6 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
         imm = parseImmediate(instr.operands[1],instr.lineNumber,running);
     }
     if (!running) {
-        cerr << "Error: Invalid immediate value at line " << instr.lineNumber << endl;
         return 0;
     }
     //check if immediate is in range
@@ -443,7 +440,6 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
         for (const auto& operand : instr.operands) {
             int32_t value = parseImmediate(operand, instr.lineNumber,running);
             if (!running) {
-                cerr << "Error: Invalid value at line " << instr.lineNumber << endl;
                 return vector<uint8_t>();
             }
             if (value > numeric_limits<int8_t>::max() || value < numeric_limits<int8_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in byte at line " << instr.lineNumber<< endl;
@@ -458,7 +454,6 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
         for (const auto& operand : instr.operands) {
             int32_t value = parseImmediate(operand, instr.lineNumber,running); 
             if (!running) {
-                cerr << "Error: Invalid value at line " << instr.lineNumber << endl;
                 return vector<uint8_t>();
             }
             if (value > numeric_limits<int16_t>::max() || value < numeric_limits<int16_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in half word at line " << instr.lineNumber<< endl;
@@ -475,7 +470,6 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
         for (const auto& operand : instr.operands) {
             int32_t value = parseImmediate(operand, instr.lineNumber,running);
             if (!running) {
-                cerr << "Error: Invalid value at line " << instr.lineNumber << endl;
                 return vector<uint8_t>();
             }
             if (value > numeric_limits<int32_t>::max() || value < numeric_limits<int32_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in word at line " << instr.lineNumber<< endl;
@@ -493,7 +487,6 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
         for (const auto& operand : instr.operands) {
             int64_t value = Immediate_64(operand, instr.lineNumber,running);
             if (!running) {
-                cerr << "Error: Invalid value at line " << instr.lineNumber << endl;
                 return vector<uint8_t>();
             }
             if (value > numeric_limits<int64_t>::max() || value < numeric_limits<int64_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in double word at line " << instr.lineNumber<< endl;
