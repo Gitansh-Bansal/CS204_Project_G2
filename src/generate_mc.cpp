@@ -106,6 +106,10 @@ int generateMC() {
                 symbolTable.setCurrentSegment(DATA); 
                 currentAddress = symbolTable.getCurrentAddress(); 
                 vector<uint8_t> data = encodeDirective(instr);               // returns a vector of bytes containing the data to be added to the data memory
+                if (data.empty() && instr.operands.size() > 0) {
+                    cerr << "Error: Invalid data directive at line " << instr.lineNumber << endl;
+                    return 1;
+                }
 
                 // write the data to the output file
                 for (size_t i = 0; i < data.size(); i++) { 

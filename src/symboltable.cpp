@@ -96,7 +96,7 @@ void SymbolTable::printSymbolTable() const {
     }
     
     cout << "-------------------------------" << endl;
-    cout << "Text Cursor: 0x" << hex << setw(8) << setfill('0') << textCursor << endl; // printing the text cursor
-    cout << "Data Cursor: 0x" << hex << setw(8) << setfill('0') << dataCursor << endl; // printing the data cursor
+    cout << "Text Cursor: 0x" << hex << setw(8) << setfill('0') << right << textCursor << endl; // printing the text cursor
+    cout << "Data Cursor: 0x" << hex << setw(8) << setfill('0') << right << dataCursor << endl; // printing the data cursor
     cout << dec << setfill(' ');
 }

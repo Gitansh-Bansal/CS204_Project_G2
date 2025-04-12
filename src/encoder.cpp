@@ -87,7 +87,7 @@ int32_t parseRegister(const string& reg, const int& linenum) {
 }
 
 //function to parse immediate to integer
-int32_t parseImmediate(const string& imm, const int& linenum) {
+int32_t parseImmediate(const string& imm, const int& linenum, bool& running) {
 
     //check if immediate is in hex , binary or decimal
     try {
@@ -114,12 +114,13 @@ int32_t parseImmediate(const string& imm, const int& linenum) {
     //catch exception if immediate is invalid
     catch (const exception&) {
         cerr << "Error: Invalid immediate value "<<imm<<" at line " << linenum << endl;
+        running = false;
         return 0;
     }
 }
 
 //function to parse immediate to 64 bit integer for double word
-int64_t Immediate_64(const string& imm, const int& linenum) {
+int64_t Immediate_64(const string& imm, const int& linenum, bool& running) {
 
     //check if immediate is in hex , binary or decimal
     try {
@@ -134,6 +135,7 @@ int64_t Immediate_64(const string& imm, const int& linenum) {
     //catch exception if immediate is invalid
     catch (const exception&) {
         cerr << "Error: Invalid immediate value "<<imm<<" at line " << linenum << endl;
+        running = false;
         return 0;
     }
 }
@@ -148,7 +150,6 @@ string intToHex(uint32_t value) {
 
 //function to encode R type instructiosn
 uint32_t encodeR(const Instruction& instr) {
-
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     uint32_t funct7 = funct7Map.at(instr.opcode);
@@ -175,6 +176,7 @@ uint32_t encodeR(const Instruction& instr) {
 
 //function to encode I type instructions
 uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& symbolTable) {
+    bool running = true;
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     int32_t rd, rs1, imm;
@@ -190,11 +192,12 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
         rd = parseRegister(instr.operands[0],instr.lineNumber);
         if (parseRegister(instr.operands[1],instr.lineNumber)!= -1) {
             rs1 = parseRegister(instr.operands[1],instr.lineNumber);
-            imm = parseImmediate(instr.operands[2],instr.lineNumber);
+            imm = parseImmediate(instr.operands[2],instr.lineNumber,running);
+
         }
         else if (parseRegister(instr.operands[2],instr.lineNumber)!= -1) {
             rs1 = parseRegister(instr.operands[2],instr.lineNumber);
-            imm = parseImmediate(instr.operands[1],instr.lineNumber);
+            imm = parseImmediate(instr.operands[1],instr.lineNumber,running);
         }
         else {
             return 0;
@@ -204,7 +207,7 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
     // load instructions (lb, lh, lw, ld)
     else if (instr.opcode == "lb" || instr.opcode == "lh" || instr.opcode == "lw" || instr.opcode == "ld") {
         rd = parseRegister(instr.operands[0],instr.lineNumber);
-        imm = parseImmediate(instr.operands[1],instr.lineNumber);
+        imm = parseImmediate(instr.operands[1],instr.lineNumber,running);
         rs1 = parseRegister(instr.operands[2],instr.lineNumber);
     } 
 
@@ -218,6 +221,11 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
         } else {
             imm = parseImmediate(instr.operands[2],instr.lineNumber);
         }
+    }
+
+    if (!running) {
+        cerr << "Error: Invalid immediate value at line " << instr.lineNumber << endl;
+        return 0;
     }
     
     //check if immediate is in range
@@ -239,6 +247,7 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
 
 //function to encode S type instructions
 uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable){
+    bool running = true;
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     int32_t rs1, rs2, imm;
@@ -251,14 +260,17 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
 
     //parse operands to integer
     rs2 = parseRegister(instr.operands[0],instr.lineNumber);
-    imm = parseImmediate(instr.operands[1],instr.lineNumber);
+    imm = parseImmediate(instr.operands[1],instr.lineNumber,running);
     rs1 = parseRegister(instr.operands[2],instr.lineNumber);
     
     //check if operands are valid
     if (rs1 < 0 || rs2 < 0) {
         return 0;
     }
-
+    if (!running) {
+        cerr << "Error: Invalid immediate value at line " << instr.lineNumber << endl;
+        return 0;
+    }
     //check if immediate is in range
     if (imm < -2048 || imm > 2047) {
         cerr << "Error: Immediate value out of range [-2048, 2047] at line " << instr.lineNumber << endl;
@@ -319,6 +331,7 @@ uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& sy
 
 //function to encode U type instructions
 uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& symbolTable) {
+    bool running = true;
     uint32_t opcode = opcodeMap.at(instr.opcode);
 
     //check if operands are less than 2
@@ -339,9 +352,12 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
     if (symbolTable.hasSymbol(instr.operands[1])) {
         imm = symbolTable.getSymbolAddress(instr.operands[1]);
     } else {
-        imm = parseImmediate(instr.operands[1],instr.lineNumber);
+        imm = parseImmediate(instr.operands[1],instr.lineNumber,running);
     }
-
+    if (!running) {
+        cerr << "Error: Invalid immediate value at line " << instr.lineNumber << endl;
+        return 0;
+    }
     //check if immediate is in range
     if (imm < -1048576 || imm > 1048574) { 
         cerr << "Error: Immediate value out of range [-1048576, 1048574] at line " << instr.lineNumber << endl;
@@ -399,7 +415,7 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
 
 //function to encode directives
 vector<uint8_t> encodeDirective(const Instruction& instr) {
-
+    bool running = true;
     //vector to store data
     vector<uint8_t> data;
 
@@ -407,7 +423,11 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     if (instr.opcode == ".byte") {
         //parsing each operand to integer
         for (const auto& operand : instr.operands) {
-            int32_t value = parseImmediate(operand, instr.lineNumber);
+            int32_t value = parseImmediate(operand, instr.lineNumber,running);
+            if (!running) {
+                cerr << "Error: Invalid value at line " << instr.lineNumber << endl;
+                return vector<uint8_t>();
+            }
             if (value > numeric_limits<int8_t>::max() || value < numeric_limits<int8_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in byte at line " << instr.lineNumber<< endl;
             
             data.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -418,7 +438,11 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     else if (instr.opcode == ".half") {
         //parsing each operand to integer
         for (const auto& operand : instr.operands) {
-            int32_t value = parseImmediate(operand, instr.lineNumber); 
+            int32_t value = parseImmediate(operand, instr.lineNumber,running); 
+            if (!running) {
+                cerr << "Error: Invalid value at line " << instr.lineNumber << endl;
+                return vector<uint8_t>();
+            }
             if (value > numeric_limits<int16_t>::max() || value < numeric_limits<int16_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in half word at line " << instr.lineNumber<< endl;
 
             //pushing each byte to data vector
@@ -431,7 +455,11 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     else if (instr.opcode == ".word") {
         //parsing each operand to integer
         for (const auto& operand : instr.operands) {
-            int32_t value = parseImmediate(operand, instr.lineNumber);
+            int32_t value = parseImmediate(operand, instr.lineNumber,running);
+            if (!running) {
+                cerr << "Error: Invalid value at line " << instr.lineNumber << endl;
+                return vector<uint8_t>();
+            }
             if (value > numeric_limits<int32_t>::max() || value < numeric_limits<int32_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in word at line " << instr.lineNumber<< endl;
             //pushing each byte to data vector
             data.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -445,7 +473,11 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     else if (instr.opcode == ".dword") {
         //parsing each operand to integer
         for (const auto& operand : instr.operands) {
-            int64_t value = Immediate_64(operand, instr.lineNumber);
+            int64_t value = Immediate_64(operand, instr.lineNumber,running);
+            if (!running) {
+                cerr << "Error: Invalid value at line " << instr.lineNumber << endl;
+                return vector<uint8_t>();
+            }
             if (value > numeric_limits<int64_t>::max() || value < numeric_limits<int64_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in double word at line " << instr.lineNumber<< endl;
             //pushing each byte to data vector
             for (int i = 0; i < 8; i++) {
@@ -456,13 +488,19 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
 
     //opcode is .asciiz
     else if (instr.opcode == ".asciiz") {
-
+        if (instr.operands.size() != 1) {
+            cerr << "Error: Invalid .asciiz directive format at line " << instr.lineNumber << endl;
+            return vector<uint8_t>();
+        }
         //extracting string from operand
         string str = instr.operands[0];
         if (str.size() >= 2 && str.front() == '"' && str.back() == '"') {
             str = str.substr(1, str.size() - 2);
         }
-        
+        else {
+            cerr << "Error: Invalid string format at line " << instr.lineNumber << endl;
+            return vector<uint8_t>();
+        }
         //pushing each byte to data vector
         for (char c : str) {
             data.push_back(static_cast<uint8_t>(c));
