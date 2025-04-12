@@ -154,7 +154,6 @@ uint32_t encodeR(const Instruction& instr) {
     
     //check if operands are valid
     if (rd < 0 || rs1 < 0 || rs2 < 0) {
-        cerr << "Error: Invalid register in R-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
     
@@ -186,7 +185,6 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
             imm = parseImmediate(instr.operands[1],instr.lineNumber);
         }
         else {
-            cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
             return 0;
         }
     } 
@@ -218,7 +216,6 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
 
     //check if registers are valid
     if (rd < 0 || rs1 < 0) {
-        cerr << "Error: Invalid register in I-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
     
@@ -247,7 +244,6 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
     
     //check if operands are valid
     if (rs1 < 0 || rs2 < 0) {
-        cerr << "Error: Invalid register in S-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
 
@@ -292,7 +288,6 @@ uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& sy
     
     //check if registers are valid
     if (rs1 < 0 || rs2 < 0) {
-        cerr << "Error: Invalid register in SB-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
     
@@ -324,7 +319,6 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
 
     //check if register is valid
     if (rd < 0) {
-        cerr << "Error: Invalid register in U-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
 
@@ -373,7 +367,6 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
     
     //check if register is valid
     if (rd < 0) {
-        cerr << "Error: Invalid register in UJ-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
 
