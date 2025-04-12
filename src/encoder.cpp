@@ -98,18 +98,22 @@ int32_t parseImmediate(const string& imm, const int& linenum, bool& running) {
             if (pos != imm.substr(2).size()) {
                 throw std::runtime_error("Invalid immediate value found!!");
             }
+            return result;
         } 
-        if (imm.size() > 2 && imm.substr(0, 2) == "0b") {
+        else if (imm.size() > 2 && imm.substr(0, 2) == "0b") {
             result =  stoi(imm.substr(2), &pos, 2);
             if (pos != imm.substr(2).size()) {
                 throw std::runtime_error("Invalid immediate value found!!");
             }      
+            return result;
         }
-        result =  stoi(imm, &pos);
-        if (pos != imm.size()) {
-            throw std::runtime_error("Invalid immediate value found!!");
-        }      
-        return result;
+        else {
+            result =  stoi(imm, &pos);
+            if (pos != imm.size()) {
+                throw std::runtime_error("Invalid immediate value found!!");
+            }      
+            return result;
+        }
     }
     //catch exception if immediate is invalid
     catch (const exception&) {
