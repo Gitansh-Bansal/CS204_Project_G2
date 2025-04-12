@@ -80,11 +80,7 @@ int generateMC() {
     symbolTable.resetCursors();
     symbolTable.setCurrentSegment(TEXT);
 
-    ofstream outFile(outputFile);          // open the output file
-    if (!outFile.is_open()) {
-        cerr << "Error: Output file " << outputFile << " could not be opened" << endl;
-        return 1;
-    }
+    stringstream outStream;                // stream to store the output
     stringstream memoryStream;             // stream to store the memory contents
 
     // instruction for termination
@@ -125,10 +121,12 @@ int generateMC() {
 
             currentAddress = symbolTable.getCurrentAddress(); 
             uint32_t machineCode = encodeInstruction(instr, currentAddress, symbolTable);         // generate the machine code for the instruction (done in encoder.cpp)
+            if (machineCode==0) return 1; // if the machine code is 0, it means that the instruction is not valid
+            
             string encodingComment = generateEncodingComment(instr, machineCode);                 // generate the encoding comment for the instruction (done in encoder.cpp)
 
             string outputLine = formatOutputLine(currentAddress, machineCode, instr, encodingComment); // format the output line according to the format
-            outFile << outputLine << endl; 
+            outStream << outputLine << endl; 
             
             symbolTable.incrementAddress(4); // increment the address of the text cursor
         }
@@ -137,11 +135,22 @@ int generateMC() {
             currentAddress = symbolTable.getCurrentAddress(); 
             uint32_t machineCode = -1;                                         // generate the machine code for the instruction (done in encoder.cpp)
             string encodingComment = "Terminate";                              // generate the encoding comment for the instruction (done in encoder.cpp)
-            outFile << formatOutputLine(currentAddress, machineCode, instr, encodingComment) << endl;    // write the output line to the output file
+            outStream << formatOutputLine(currentAddress, machineCode, instr, encodingComment) << endl;    // write the output line to the output file
             break;
         }
+        else if(instr.type == UNKNOWN) {
+            symbolTable.setCurrentSegment(TEXT);                             // switch to the text segment
+            cerr<< "Error: Unknown instruction type at line " << instr.lineNumber << endl;
+            return 1;
+        }
     }
-    
+
+    ofstream outFile(outputFile);          // open the output file
+    if (!outFile.is_open()) {
+        cerr << "Error: Output file " << outputFile << " could not be opened" << endl;
+        return 1;
+    }
+    outFile << outStream.str();            // write the output stream to the output file
     outFile << endl << memoryStream.str(); // write the data memory contents to the output file
     outFile.close();
     cout << "Output successfully written to " << outputFile << endl << endl;

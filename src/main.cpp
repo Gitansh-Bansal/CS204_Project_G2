@@ -113,8 +113,11 @@ void runConsole(Simulator& simulator) {
 }
 
 int main(int argc, char** argv) {
-    generateMC();
+    //generateMC();
     cout << "\n[Phase 1] Generating machine code...\n" << endl;
+    if (generateMC()) {
+        return 1;
+    }
 
     cout << "\n[Phase 2] Initializing RISC-V Simulator...\n" << endl;
     Simulator simulator;

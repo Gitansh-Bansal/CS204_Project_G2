@@ -55,7 +55,7 @@ static const unordered_map<string, uint32_t> funct7Map = {
 };
 
 //function to parse register to integer
-int32_t parseRegister(const string& reg) {
+int32_t parseRegister(const string& reg, const int& linenum) {
     unordered_map <string, int> reg_map = {
         {"x0", 0}, {"x1", 1}, {"x2", 2}, {"x3", 3},
         {"x4", 4}, {"x5", 5}, {"x6", 6}, {"x7", 7},
@@ -82,6 +82,7 @@ int32_t parseRegister(const string& reg) {
     if (reg_map.find(reg) != reg_map.end()) {
         return reg_map[reg];
     }
+    cerr << "Error: Invalid register " << reg << " at line " << linenum << endl;
     return -1;
 }
 
@@ -141,15 +142,15 @@ uint32_t encodeR(const Instruction& instr) {
     uint32_t funct7 = funct7Map.at(instr.opcode);
 
     //check if operands are less than 3
-    if (instr.operands.size() < 3) {
+    if (instr.operands.size() < 3 || instr.operands.size() > 3) {
         cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
     
     //parse operands to integer
-    int32_t rd = parseRegister(instr.operands[0]);
-    int32_t rs1 = parseRegister(instr.operands[1]);
-    int32_t rs2 = parseRegister(instr.operands[2]);
+    int32_t rd = parseRegister(instr.operands[0],instr.lineNumber);
+    int32_t rs1 = parseRegister(instr.operands[1],instr.lineNumber);
+    int32_t rs2 = parseRegister(instr.operands[2],instr.lineNumber);
     
     //check if operands are valid
     if (rd < 0 || rs1 < 0 || rs2 < 0) {
@@ -168,20 +169,20 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
     int32_t rd, rs1, imm;
 
     //check if operands are less than 3
-    if (instr.operands.size() < 3) {
+    if (instr.operands.size() < 3 || instr.operands.size() > 3) {
         cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
 
     // jalr instruction
     if (instr.opcode == "jalr") {
-        rd = parseRegister(instr.operands[0]);
-        if (parseRegister(instr.operands[1])!= -1) {
-            rs1 = parseRegister(instr.operands[1]);
+        rd = parseRegister(instr.operands[0],instr.lineNumber);
+        if (parseRegister(instr.operands[1],instr.lineNumber)!= -1) {
+            rs1 = parseRegister(instr.operands[1],instr.lineNumber);
             imm = parseImmediate(instr.operands[2],instr.lineNumber);
         }
-        else if (parseRegister(instr.operands[2])!= -1) {
-            rs1 = parseRegister(instr.operands[2]);
+        else if (parseRegister(instr.operands[2],instr.lineNumber)!= -1) {
+            rs1 = parseRegister(instr.operands[2],instr.lineNumber);
             imm = parseImmediate(instr.operands[1],instr.lineNumber);
         }
         else {
@@ -192,15 +193,15 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
 
     // load instructions (lb, lh, lw, ld)
     else if (instr.opcode == "lb" || instr.opcode == "lh" || instr.opcode == "lw" || instr.opcode == "ld") {
-        rd = parseRegister(instr.operands[0]);
+        rd = parseRegister(instr.operands[0],instr.lineNumber);
         imm = parseImmediate(instr.operands[1],instr.lineNumber);
-        rs1 = parseRegister(instr.operands[2]);
+        rs1 = parseRegister(instr.operands[2],instr.lineNumber);
     } 
 
     // other I-type
     else {
-        rd = parseRegister(instr.operands[0]);
-        rs1 = parseRegister(instr.operands[1]);
+        rd = parseRegister(instr.operands[0],instr.lineNumber);
+        rs1 = parseRegister(instr.operands[1],instr.lineNumber);
         
         if (symbolTable.hasSymbol(instr.operands[2])) {
             imm = symbolTable.getSymbolAddress(instr.operands[2]);
@@ -234,15 +235,15 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
     int32_t rs1, rs2, imm;
 
     //check if operands are less than 3
-    if (instr.operands.size() < 3) {
+    if (instr.operands.size() < 3 || instr.operands.size() > 3) {
         cerr << "Error: Invalid S-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
 
     //parse operands to integer
-    rs2 = parseRegister(instr.operands[0]);
+    rs2 = parseRegister(instr.operands[0],instr.lineNumber);
     imm = parseImmediate(instr.operands[1],instr.lineNumber);
-    rs1 = parseRegister(instr.operands[2]);
+    rs1 = parseRegister(instr.operands[2],instr.lineNumber);
     
     //check if operands are valid
     if (rs1 < 0 || rs2 < 0) {
@@ -268,14 +269,14 @@ uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& sy
     uint32_t funct3 = funct3Map.at(instr.opcode);
     
     //check if operands are less than 3
-    if (instr.operands.size() < 3) {
+    if (instr.operands.size() < 3 || instr.operands.size() > 3) {
         cerr << "Error: Invalid SB-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
 
     //parse operands to integer
-    int32_t rs1 = parseRegister(instr.operands[0]);
-    int32_t rs2 = parseRegister(instr.operands[1]);
+    int32_t rs1 = parseRegister(instr.operands[0],instr.lineNumber);
+    int32_t rs2 = parseRegister(instr.operands[1],instr.lineNumber);
     
     //checking if label is in symbol table
     int32_t labelAddress;
@@ -314,12 +315,12 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
     uint32_t opcode = opcodeMap.at(instr.opcode);
 
     //check if operands are less than 2
-    if (instr.operands.size() < 2) {
+    if (instr.operands.size() < 2 || instr.operands.size() > 2) {   
         cerr << "Error: Invalid U-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
     
-    int32_t rd = parseRegister(instr.operands[0]);
+    int32_t rd = parseRegister(instr.operands[0],instr.lineNumber);
 
     //check if register is valid
     if (rd < 0) {
@@ -352,12 +353,12 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
     uint32_t opcode = opcodeMap.at(instr.opcode);
 
     //check if operands are less than 2
-    if (instr.operands.size() < 2) {
+    if (instr.operands.size() < 2 || instr.operands.size() > 2) {
         cerr << "Error: Invalid UJ-type instruction format at line " << instr.lineNumber << endl;
         return 0;
     }
 
-    int32_t rd = parseRegister(instr.operands[0]);
+    int32_t rd = parseRegister(instr.operands[0],instr.lineNumber);
 
     //checking if label is in symbol table
     int32_t targetAddress;

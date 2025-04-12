@@ -111,7 +111,7 @@ Instruction parseLine(const string& rawline, int lineNumber) {
 
     // if line is empty after removing comments, return UNKNOWN type instruction
     if (line.empty()) {
-        instruction.type = UNKNOWN;
+        instruction.type = EMPTY;
         return instruction;
     }
 
@@ -169,8 +169,8 @@ vector<Instruction> parseFile(const string& filename) {
 
     while(getline(file, line)) {
         Instruction instr = parseLine(line, lineNumber);                                // parse the assembly code line by line
-        if (instr.type != UNKNOWN || instr.hasLabel) instructions.push_back(instr);     // push only valid instructions to the output vector
-        
+        if (instr.type != EMPTY || instr.hasLabel) instructions.push_back(instr);     // push only valid instructions to the output vector
+        //instructions.push_back(instr);     // push all instructions to the output vector
         lineNumber++;       // increment line numbers after reading each line
     }
 

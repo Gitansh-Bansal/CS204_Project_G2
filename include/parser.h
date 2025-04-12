@@ -14,7 +14,8 @@ enum InstructionType {
     UJ_TYPE,
     DIRECTIVE,
     LABEL,
-    UNKNOWN
+    UNKNOWN,
+    EMPTY
 };
 
 // defining the structure of an instruction
