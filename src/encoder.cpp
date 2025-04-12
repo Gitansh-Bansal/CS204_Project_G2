@@ -94,13 +94,13 @@ int32_t parseImmediate(const string& imm, const int& linenum, bool& running) {
         size_t pos;
         int result;
         if (imm.size() > 2 && imm.substr(0, 2) == "0x") {
-            result =  stoi(imm.substr(2), nullptr, 16, &pos);
+            result =  stoi(imm.substr(2), &pos, 16);
             if (pos != imm.substr(2).size()) {
                 throw std::runtime_error("Invalid immediate value found!!");
             }
         } 
         if (imm.size() > 2 && imm.substr(0, 2) == "0b") {
-            result =  stoi(imm.substr(2), nullptr, 2, &pos);
+            result =  stoi(imm.substr(2), &pos, 2);
             if (pos != imm.substr(2).size()) {
                 throw std::runtime_error("Invalid immediate value found!!");
             }      
