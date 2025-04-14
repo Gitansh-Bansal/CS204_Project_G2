@@ -35,15 +35,23 @@ void Simulator::run() {
 void Simulator::step() {
     cout << "\n===== Cycle " << dec << clock << " =====" << endl;
 
-    // 5 stages of the execution
-    fetch();
-    if (!isRunning()) return;
-    DecodedInstruction decodedInst = decode();
-    execute(decodedInst);
-    memoryAccess(decodedInst);
-    writeBack(decodedInst);
-
-    clock++;
+    if (pipeliningEnabled) {
+        fetchPipeline();
+        decodePipeline();
+        executePipeline();
+        memoryAccessPipeline();
+        writeBackPipeline();
+        clock++;
+    }
+    else {
+        fetch();
+        if (!isRunning()) return;
+        DecodedInstruction decodedInst = decode();
+        execute(decodedInst);
+        memoryAccess(decodedInst);
+        writeBack(decodedInst);
+        clock++;
+    }
 }
 
 // function to check if the simulator is running
@@ -64,6 +72,36 @@ void Simulator::printRegisters() const {
 //function to print memory
 void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr, char format) const{
     memory.printMemory(start_addr, end_addr, format);
+}
+
+void Simulator::fetchPipeline() {
+    if (control.isFetchEmpty()) {
+        return;
+    }
+    FetchControl fetchCtrl = control.getFetchControl();
+    if (fetchCtrl.stall) {
+        cout << "Fetch stage is stalled." << endl;
+        return;
+    }
+    if (fetchCtrl.flush) {
+        cout << "Fetch stage is flushed." << endl;
+        regState.setIR(0xFFFFFFFF);
+        return;
+    }
+    cout << "FETCH STAGE:\n";
+    uint32_t PC = regState.getPC();
+    if(PC%4!=0) {   
+        cerr << "Error: Unaligned memory access at address 0x" << hex << PC << dec << endl;
+        regState.setIR(0xffffffff);
+    }
+    uint32_t instruction = memory.readWord(PC);
+    if (instruction == 0) {
+        cout << "ERROR : Invalid instruction at PC 0x" << hex << regState.getPC() << endl;
+        regState.setIR(0xFFFFFFFF);
+        return;
+    }
+    regState.setIR(instruction);
+    regState.setTemp("PC_TEMP", PC+4);
 }
 
 //function to fetch instruction
