@@ -29,37 +29,34 @@ enum AluOperation {
 
 struct FetchControl {
     bool stall=false;
-    bool flush;
+    bool flush = false;
 };
 
 struct DecodeControl {
-    uint32_t opcode;
     bool stall=false;
-    bool branch;
-    bool jump;
 };
 
 struct ExecuteControl {
     bool stall = false;
-    AluOperation aluOp;
-    bool useImm;
-    bool branch;
-    bool aluSrc;
-    bool jump;
+    AluOperation aluOp = NONE;
+    bool aluSrc = false;
+    bool branch = false;
+    bool jump = false;
 };
 
 struct MemoryControl {
     bool stall = false;
-    bool memRead;
-    bool memWrite;
-    uint32_t memWidth; // 1=byte, 2=half, 4=word
-    bool signExtend;
+    bool memRead = false;
+    bool memWrite = false;
+    uint32_t memWidth = -1; // 1=byte, 2=half, 4=word
+    bool signExtend = false;
 };
 
 struct WriteBackControl {
     bool stall = false;
-    bool regWrite;
-    bool memToReg;
+    bool regWrite = false;
+    bool memToReg = false;
+    uint32_t regDest = -1;
 };
 
 class ControlUnit {
