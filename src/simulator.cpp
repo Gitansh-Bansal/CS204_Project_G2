@@ -127,7 +127,6 @@ void Simulator::decodePipeline() {
                     break;
                 case 0x1: exeCtrl.aluOp = SLL; break; 
                 case 0x2: exeCtrl.aluOp = SLT; break; 
-                case 0x3: exeCtrl.aluOp = SLTU; break; 
                 case 0x4: /
                     if (decodedInst.funct7 == 0x00) exeCtrl.aluOp = XOR;
                     else if (decodedInst.funct7 == 0x01) exeCtrl.aluOp = DIV; 
@@ -154,15 +153,6 @@ void Simulator::decodePipeline() {
             exeCtrl.aluSrc = true; // use immediate 
             switch (decodedInst.funct3) {
                 case 0x0: exeCtrl.aluOp = ADD; break;  // ADDI
-                case 0x1: exeCtrl.aluOp = SLL; break;  // SLLI (uses 5-bit immediate) 
-                case 0x2: exeCtrl.aluOp = SLT; break;  // SLTI
-                case 0x3: exeCtrl.aluOp = SLTU; break; // SLTIU
-                case 0x4: exeCtrl.aluOp = XOR; break;  // XORI
-                case 0x5: // SRLI/SRAI (uses 5-bit immediate)
-                    if (((decodedInst.imm >> 5) & 0x7F) == 0x00) exeCtrl.aluOp = SRL; // check upper bits of imm 
-                    else if (((decodedInst.imm >> 5) & 0x7F) == 0x20) exeCtrl.aluOp = SRA; // check upper bits of imm
-                    else exeCtrl.aluOp = NONE;
-                    break;
                 case 0x6: exeCtrl.aluOp = OR; break;   // ORI
                 case 0x7: exeCtrl.aluOp = AND; break;  // ANDI
                 default: exeCtrl.aluOp = NONE; break; // invalid funct3
@@ -180,8 +170,7 @@ void Simulator::decodePipeline() {
                 case 0x0: memCtrl.memWidth = 1; memCtrl.signExtend = true; break;  // LB
                 case 0x1: memCtrl.memWidth = 2; memCtrl.signExtend = true; break;  // LH
                 case 0x2: memCtrl.memWidth = 4; memCtrl.signExtend = false; break; // LW
-                case 0x4: memCtrl.memWidth = 1; memCtrl.signExtend = false; break; // LBU
-                case 0x5: memCtrl.memWidth = 2; memCtrl.signExtend = false; break; // LHU
+                //case 0x3: memCtrl.memWidth = 8; memCtrl.signExtend = false; break; // LD
                 default: memCtrl.memRead = false; break; // invalid func3
             }
             wbCtrl.regWrite = (decodedInst.rd != 0) && memCtrl.memRead; // write only if valid load and rd!=x0
@@ -220,12 +209,6 @@ void Simulator::decodePipeline() {
                     break;
                 case 0x5: 
                     exeCtrl.branchType = BGE;
-                    break;
-                case 0x6: 
-                    exeCtrl.branchType = BLTU;
-                    break;
-                case 0x7: 
-                    exeCtrl.branchType = BGEU;
                     break;
                 default:
                     cout << "  Warning: Invalid funct3 (0x" << hex << decodedInst.funct3 << dec << ") for Branch opcode. Treating as invalid." << endl;
@@ -277,6 +260,7 @@ void Simulator::decodePipeline() {
     }
 
 
+
     control.addExecuteControl(exeCtrl);
     control.addMemoryControl(memCtrl);
     control.addWriteBackControl(wbCtrl);
@@ -294,6 +278,7 @@ void Simulator::decodePipeline() {
 
     // Hazard Detection Logic 
 }
+
 
 
 
