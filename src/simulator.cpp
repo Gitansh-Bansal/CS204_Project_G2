@@ -106,7 +106,7 @@ void Simulator::decodePipeline() {
     }
 
     DecodedInstruction decodedInst = decode(); // decodes the instruction using non-pipelined decode function
-    if (decodedInst.opcode == 0xFFFFFFFF) {
+    if (regState.getIR() == 0xffffffff) {
         cout << "Decode stage: Termination instruction detected." << endl;
         return;
     }
@@ -127,7 +127,7 @@ void Simulator::decodePipeline() {
                     break;
                 case 0x1: exeCtrl.aluOp = SLL; break; 
                 case 0x2: exeCtrl.aluOp = SLT; break; 
-                case 0x4: /
+                case 0x4: 
                     if (decodedInst.funct7 == 0x00) exeCtrl.aluOp = XOR;
                     else if (decodedInst.funct7 == 0x01) exeCtrl.aluOp = DIV; 
                     else exeCtrl.aluOp = NONE;
@@ -195,7 +195,7 @@ void Simulator::decodePipeline() {
             case 0x63: // SB-type
             exeCtrl.aluSrc = false; // use rs2
             exeCtrl.branch = true; 
-            exeCtrl.aluOp = AluOperation::SUB; // generally sub is used in ALU for branch comparison
+            exeCtrl.aluOp = SUB; // generally sub is used in ALU for branch comparison
 
             switch (decodedInst.funct3) {
                 case 0x0: 
@@ -251,7 +251,7 @@ void Simulator::decodePipeline() {
             exeCtrl.aluSrc = true; // use imm
             exeCtrl.aluOp = AUIPC; 
             wbCtrl.regWrite = (decodedInst.rd != 0);
-            wbCtrl.memToR = false; 
+            wbCtrl.memToReg = false; 
             break;
 
         default:
@@ -277,6 +277,161 @@ void Simulator::decodePipeline() {
     control.addDecodeControl();
 
     // Hazard Detection Logic 
+}
+
+
+void Simulator::executePipeline() {
+    if (control.isExecuteEmpty()) {
+        cout << "Execute stage: Control queue empty, skipping." << endl;
+        return;
+    }
+
+    ExecuteControl exeCtrl = control.getExecuteControl();
+    if (exeCtrl.stall) {
+        cout << "Execute stage is stalled." << endl;
+        return;
+    }
+
+    if (exeCtrl.flush) {
+        cout << "Execute stage is flushed." << endl;
+        return;
+    }
+
+    //check for termination instruction
+    if (regState.getIR() == 0xffffffff) {
+        cout << "Execute stage: Termination instruction detected." << endl;
+        return;
+    }
+
+    // get the values from the register state
+    int32_t rs1_val = regState.getTemp("RA");
+    int32_t rs2_val = regState.getTemp("RB");
+    int32_t imm_val = regState.getTemp("IMM");
+
+    int32_t rz_val = 0;
+    uint32_t next_pc = regState.getTemp("PC_TEMP");
+
+    //switch case for ALU operations
+    switch(exeCtrl.aluOp) {
+        case ADD:
+            if(exeCtrl.jump) {
+                rz_val = regState.getTemp("PC_TEMP");
+                next_pc = regState.getPC() + imm_val;  
+            }
+            //check if rs2 is used or immediate value is used
+            else if (exeCtrl.aluSrc) {
+                rz_val = rs1_val + imm_val;
+            } else {
+                rz_val = rs1_val + rs2_val;
+            }
+            break;
+
+        case SUB:
+            rz_val = rs1_val - rs2_val;
+            //check if its branch operation or not then update the next pc
+            if (exeCtrl.branch) {
+                //check branch and update PCtemp accordingly
+                switch(exeCtrl.branchType)
+                {
+                    case BEQ:
+                        if(rz_val == 0) {
+                            next_pc = regState.getPC() + imm_val;
+                        } 
+                        break;
+                    case BNE:
+                        if(rz_val != 0) {
+                            next_pc = regState.getPC() + imm_val;
+                        } 
+                        break;
+                    case BLT:
+                        if(rz_val < 0) {
+                            next_pc = regState.getPC() + imm_val;
+                        } 
+                        break;  
+                    case BGE:
+                        if(rz_val >= 0) {
+                            next_pc = regState.getPC() + imm_val;
+                        } 
+                        break;
+                    default:
+                        cout << "Unknown branch type." << endl;
+                        regState.setIR(0xFFFFFFFF);
+                        break;            
+                }
+            } 
+    
+            break;
+        case MUL:
+            rz_val = rs1_val * rs2_val;
+            break;
+
+        case SLL:
+            rz_val = rs1_val << (rs2_val & 0x1F);
+            break;
+        case SLT:
+            rz_val = (rs1_val < rs2_val) ? 1 : 0;
+            break;
+        case XOR:
+            rz_val = rs1_val ^ rs2_val;
+            break;
+        case DIV:
+            rz_val = (rs2_val != 0) ? (rs1_val / rs2_val) : -1;
+            break;
+        case SRL:
+            rz_val = static_cast<uint32_t>(rs1_val) >> (rs2_val & 0x1F);
+            break;
+        case SRA:
+            rz_val = rs1_val >> (rs2_val & 0x1F);
+            break;
+
+        case AND:
+            if(exeCtrl.aluSrc) {
+                rz_val = rs1_val & imm_val;
+            } else {
+                rz_val = rs1_val & rs2_val;
+            }
+            break;
+
+        case OR:
+            if(exeCtrl.aluSrc) {
+                rz_val = rs1_val | imm_val;
+            } else {
+                rz_val = rs1_val | rs2_val;
+            }
+            break;
+
+        case REM:
+            rz_val = (rs2_val != 0) ? (rs1_val % rs2_val) : rs1_val;
+            break;
+        case ADDI:
+            rz_val = rs1_val + imm_val;
+            break;
+        case ANDI:
+            rz_val = rs1_val & imm_val;
+            break;
+        case ORI:
+            rz_val = rs1_val | imm_val;
+            break;
+    
+
+
+        case LUI:
+            rz_val = imm_val; // LUI operation
+            break;
+        case AUIPC:
+            rz_val = regState.getPC() + imm_val; // AUIPC operation
+            break;
+        default:
+            cout << "Unknown ALU operation." << endl;
+            regState.setIR(0xFFFFFFFF);
+    }
+
+    //set the values in the register state  
+    regState.setTemp("RZ", rz_val);
+    regState.setPC(next_pc); // update the PC
+
+
+
 }
 
 

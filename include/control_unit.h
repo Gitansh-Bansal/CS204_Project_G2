@@ -12,15 +12,12 @@ enum AluOperation {
     MUL,
     SLL,
     SLT,
-    SLTU, 
     XOR,
     DIV,
-    DIVU,
     SRL,
     SRA,
     OR,
     REM,
-    REMU, 
     AND,
     LUI,  
     AUIPC
@@ -31,9 +28,7 @@ enum class BranchCondition {
     BEQ, 
     BNE, 
     BLT, 
-    BGE,
-    BLTU,
-    BGEU, 
+    BGE, 
     INVALID
 };
 
