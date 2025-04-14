@@ -27,6 +27,16 @@ enum AluOperation {
     // COPY_A 
 };
 
+enum class BranchCondition {
+    BEQ, 
+    BNE, 
+    BLT, 
+    BGE,
+    BLTU,
+    BGEU, 
+    INVALID
+};
+
 struct FetchControl {
     bool stall=false;
     bool flush = false;
@@ -39,8 +49,9 @@ struct DecodeControl {
 struct ExecuteControl {
     bool stall = false;
     AluOperation aluOp = NONE;
-    bool aluSrc = false;
+    bool aluSrc = false; // false: rs2, true: imm
     bool branch = false;
+    branchCondition branchType = BranchCondition::INVALID;
     bool jump = false;
 };
 

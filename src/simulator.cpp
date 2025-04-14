@@ -74,8 +74,11 @@ void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr, char format)
     memory.printMemory(start_addr, end_addr, format);
 }
 
+// fetch function for pipelined version
+// takes care of the stalls and calls the non-pipelined fetch function
 void Simulator::fetchPipeline() {
     if (control.isFetchEmpty()) {
+        fetch();
         return;
     }
     FetchControl fetchCtrl = control.getFetchControl();
@@ -85,24 +88,218 @@ void Simulator::fetchPipeline() {
     }
     if (fetchCtrl.flush) {
         cout << "Fetch stage is flushed." << endl;
-        regState.setIR(0xFFFFFFFF);
         return;
     }
-    cout << "FETCH STAGE:\n";
-    uint32_t PC = regState.getPC();
-    if(PC%4!=0) {   
-        cerr << "Error: Unaligned memory access at address 0x" << hex << PC << dec << endl;
-        regState.setIR(0xffffffff);
-    }
-    uint32_t instruction = memory.readWord(PC);
-    if (instruction == 0) {
-        cout << "ERROR : Invalid instruction at PC 0x" << hex << regState.getPC() << endl;
-        regState.setIR(0xFFFFFFFF);
-        return;
-    }
-    regState.setIR(instruction);
-    regState.setTemp("PC_TEMP", PC+4);
+    fetch();
 }
+
+// decode function for pipelined version
+void Simulator::decodePipeline() {
+    if (control.isDecodeEmpty()) {
+        cout << "Decode stage: Control queue empty, skipping." << endl;
+        return;
+    }
+    DecodeControl decodeCtrl = control.getDecodeControl();
+    if (decodeCtrl.stall) {
+        cout << "Decode stage is stalled." << endl;
+        return;
+    }
+
+    DecodedInstruction decodedInst = decode(); // decodes the instruction using non-pipelined decode function
+    if (decodedInst.opcode == 0xFFFFFFFF) {
+        cout << "Decode stage: Termination instruction detected." << endl;
+        return;
+    }
+
+    ExecuteControl exeCtrl;
+    MemoryControl memCtrl;
+    WriteBackControl wbCtrl;
+
+    switch (decodedInst.opcode) {
+        case 0x33: // R-type
+            exeCtrl.aluSrc = false; // use rs2
+            switch (decodedInst.funct3) {
+                case 0x0: 
+                    if (decodedInst.funct7 == 0x00) exeCtrl.aluOp = ADD;
+                    else if (decodedInst.funct7 == 0x20) exeCtrl.aluOp = SUB;
+                    else if (decodedInst.funct7 == 0x01) exeCtrl.aluOp = MUL;
+                    else exeCtrl.aluOp = NONE; // unknown funct7
+                    break;
+                case 0x1: exeCtrl.aluOp = SLL; break; 
+                case 0x2: exeCtrl.aluOp = SLT; break; 
+                case 0x3: exeCtrl.aluOp = SLTU; break; 
+                case 0x4: /
+                    if (decodedInst.funct7 == 0x00) exeCtrl.aluOp = XOR;
+                    else if (decodedInst.funct7 == 0x01) exeCtrl.aluOp = DIV; 
+                    else exeCtrl.aluOp = NONE;
+                    break;
+                case 0x5: 
+                    if (decodedInst.funct7 == 0x00) exeCtrl.aluOp = SRL;
+                    else if (decodedInst.funct7 == 0x20) exeCtrl.aluOp = SRA;
+                    else exeCtrl.aluOp = NONE;
+                    break;
+                case 0x6: 
+                    if (decodedInst.funct7 == 0x00) exeCtrl.aluOp = OR;
+                     else if (decodedInst.funct7 == 0x01) exeCtrl.aluOp = REM; 
+                    else exeCtrl.aluOp = NONE;
+                    break;
+                case 0x7: exeCtrl.aluOp = AND; break; 
+                default: exeCtrl.aluOp = NONE; break; // invalid funct3
+            }
+            wbCtrl.regWrite = (decodedInst.rd != 0);    // dont write to x0
+            wbCtrl.memToReg = false;
+            break;
+
+        case 0x13: // I-type 
+            exeCtrl.aluSrc = true; // use immediate 
+            switch (decodedInst.funct3) {
+                case 0x0: exeCtrl.aluOp = ADD; break;  // ADDI
+                case 0x1: exeCtrl.aluOp = SLL; break;  // SLLI (uses 5-bit immediate) 
+                case 0x2: exeCtrl.aluOp = SLT; break;  // SLTI
+                case 0x3: exeCtrl.aluOp = SLTU; break; // SLTIU
+                case 0x4: exeCtrl.aluOp = XOR; break;  // XORI
+                case 0x5: // SRLI/SRAI (uses 5-bit immediate)
+                    if (((decodedInst.imm >> 5) & 0x7F) == 0x00) exeCtrl.aluOp = SRL; // check upper bits of imm 
+                    else if (((decodedInst.imm >> 5) & 0x7F) == 0x20) exeCtrl.aluOp = SRA; // check upper bits of imm
+                    else exeCtrl.aluOp = NONE;
+                    break;
+                case 0x6: exeCtrl.aluOp = OR; break;   // ORI
+                case 0x7: exeCtrl.aluOp = AND; break;  // ANDI
+                default: exeCtrl.aluOp = NONE; break; // invalid funct3
+            }
+            wbCtrl.regWrite = (decodedInst.rd != 0);
+            wbCtrl.memToReg = false;
+            break;
+
+        case 0x03: // I-type load
+            exeCtrl.aluSrc = true; // use imm
+            exeCtrl.aluOp = ADD; // address: RA + IMM
+            memCtrl.memRead = true;
+            memCtrl.memWrite = false;
+            switch (decodedInst.funct3) {
+                case 0x0: memCtrl.memWidth = 1; memCtrl.signExtend = true; break;  // LB
+                case 0x1: memCtrl.memWidth = 2; memCtrl.signExtend = true; break;  // LH
+                case 0x2: memCtrl.memWidth = 4; memCtrl.signExtend = false; break; // LW
+                case 0x4: memCtrl.memWidth = 1; memCtrl.signExtend = false; break; // LBU
+                case 0x5: memCtrl.memWidth = 2; memCtrl.signExtend = false; break; // LHU
+                default: memCtrl.memRead = false; break; // invalid func3
+            }
+            wbCtrl.regWrite = (decodedInst.rd != 0) && memCtrl.memRead; // write only if valid load and rd!=x0
+            wbCtrl.memToReg = memCtrl.memRead; // write from memory to register
+            break;
+
+        case 0x23: // S-type 
+            exeCtrl.aluSrc = true; // use imm
+            exeCtrl.aluOp = ADD; // address: RA + IMM
+            memCtrl.memRead = false;
+            memCtrl.memWrite = true;
+            switch (decodedInst.funct3) {
+                case 0x0: memCtrl.memWidth = 1; break; // SB
+                case 0x1: memCtrl.memWidth = 2; break; // SH
+                case 0x2: memCtrl.memWidth = 4; break; // SW
+                default: memCtrl.memWrite = false; break; // invalid func3
+            }
+            wbCtrl.regWrite = false;
+            wbCtrl.memToReg = false;
+            break;
+
+            case 0x63: // SB-type
+            exeCtrl.aluSrc = false; // use rs2
+            exeCtrl.branch = true; 
+            exeCtrl.aluOp = AluOperation::SUB; // generally sub is used in ALU for branch comparison
+
+            switch (decodedInst.funct3) {
+                case 0x0: 
+                    exeCtrl.branchType = BEQ;
+                    break;
+                case 0x1:
+                    exeCtrl.branchType = BNE;
+                    break;
+                case 0x4:
+                    exeCtrl.branchType = BLT;
+                    break;
+                case 0x5: 
+                    exeCtrl.branchType = BGE;
+                    break;
+                case 0x6: 
+                    exeCtrl.branchType = BLTU;
+                    break;
+                case 0x7: 
+                    exeCtrl.branchType = BGEU;
+                    break;
+                default:
+                    cout << "  Warning: Invalid funct3 (0x" << hex << decodedInst.funct3 << dec << ") for Branch opcode. Treating as invalid." << endl;
+                    exeCtrl.branchType = INVALID;
+                    exeCtrl.branch = false; // invalid branch
+                    exeCtrl.aluOp = NONE; 
+                    break;
+            }
+            memCtrl.memRead = false;
+            memCtrl.memWrite = false;
+            wbCtrl.regWrite = false;
+            wbCtrl.memToReg = false;
+            break;
+
+        case 0x6F: // UJ-type 
+            exeCtrl.aluOp = ADD; // target: PC + imm (execute needs PC)
+            exeCtrl.jump = true;
+            // writes PC+4 to rd
+            wbCtrl.regWrite = (decodedInst.rd != 0);
+            wbCtrl.memToReg = false; 
+            break;
+
+        case 0x67: // I-type JALR
+            exeCtrl.aluSrc = true; // use imm
+            exeCtrl.aluOp = ADD; // address: RA + IMM
+            exeCtrl.jump = true;
+            // writes PC+4 to rd
+            wbCtrl.regWrite = (decodedInst.rd != 0);
+            wbCtrl.memToReg = false; 
+            break;
+
+        case 0x37: // U-type LUI
+            exeCtrl.aluSrc = true; // use imm
+            exeCtrl.aluOp = LUI; 
+            wbCtrl.regWrite = (decodedInst.rd != 0);
+            wbCtrl.memToReg = false; 
+            break;
+
+        case 0x17: // U-type AUIPC
+            exeCtrl.aluSrc = true; // use imm
+            exeCtrl.aluOp = AUIPC; 
+            wbCtrl.regWrite = (decodedInst.rd != 0);
+            wbCtrl.memToR = false; 
+            break;
+
+        default:
+            cout << "  Decode stage: unrecognized opcode." << endl;
+            break;
+    }
+
+
+    control.addExecuteControl(exeCtrl);
+    control.addMemoryControl(memCtrl);
+    control.addWriteBackControl(wbCtrl);
+
+    // cout << "  Generated Controls -> EX:{op:" << static_cast<int>(exeCtrl.aluOp) << ", aluSrc:" << exeCtrl.aluSrc << ", branch:" << exeCtrl.branch << ", jump:" << exeCtrl.jump << "}"
+        //  << " MEM:{memRead:" << memCtrl.memRead << ", memWrite:" << memCtrl.memWrite << ", width:" << memCtrl.memWidth << ", signExt:" << memCtrl.signExtend << "}"
+        //  << " WB:{regWrite:" << wbCtrl.regWrite << ", memToReg:" << wbCtrl.memToReg << ", rd:" << wbCtrl.rd << "}" << endl;
+
+
+    // fetch control for next cycle
+    control.addFetchControl();
+
+    // add decode control for next cycle
+    control.addDecodeControl();
+
+    // Hazard Detection Logic 
+}
+
+
+
+
+
+
 
 //function to fetch instruction
 void Simulator::fetch() {
