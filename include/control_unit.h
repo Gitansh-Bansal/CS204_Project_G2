@@ -5,6 +5,28 @@
 #include <vector>
 #include <cstdint>
 
+enum AluOperation {
+    NONE, 
+    ADD,
+    SUB,
+    MUL,
+    SLL,
+    SLT,
+    SLTU, 
+    XOR,
+    DIV,
+    DIVU,
+    SRL,
+    SRA,
+    OR,
+    REM,
+    REMU, 
+    AND,
+    LUI,  
+    AUIPC
+    // COPY_A 
+};
+
 struct FetchControl {
     bool stall=false;
     bool flush;
@@ -19,7 +41,7 @@ struct DecodeControl {
 
 struct ExecuteControl {
     bool stall = false;
-    uint32_t aluOp;
+    AluOperation aluOp;
     bool useImm;
     bool branch;
     bool aluSrc;
