@@ -44,6 +44,12 @@ private:
     Memory memory;
     uint32_t pc;
     uint32_t clock;
+
+    void fetchPipeline();
+    void decodePipeline();
+    void executePipeline();
+    void memoryAccessPipeline();
+    void writeBackPipeline();
     
     // Pipeline stages
     void fetch();
