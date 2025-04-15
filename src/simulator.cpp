@@ -308,6 +308,8 @@ void Simulator::executePipeline() {
     int32_t rs2_val = regState.getTemp("RB");
     int32_t imm_val = regState.getTemp("IMM");
 
+    regState.setTemp("RM", regState.getTemp("RB"));
+
     int32_t rz_val = 0;
     uint32_t next_pc = regState.getTemp("PC_TEMP");
 
@@ -505,7 +507,7 @@ Simulator::DecodedInstruction Simulator::decode() {
             regState.setTemp("RA", regState.getGen(decodedInst.rs1));
             regState.setTemp("RB", regState.getGen(decodedInst.rs2));
             regState.setTemp("IMM", decodedInst.imm);
-            regState.setTemp("RM", regState.getGen(decodedInst.rs2));
+            // regState.setTemp("RM", regState.getGen(decodedInst.rs2));
             break;
         case(0x63): // sb type
             decodedInst.funct3 = (instruction >> 12) & 0x07;
@@ -569,6 +571,8 @@ void Simulator::execute(DecodedInstruction& decodedInst)
     int32_t rs1_val = regState.getTemp("RA");
     int32_t rs2_val = regState.getTemp("RB");
     int32_t imm_val = regState.getTemp("IMM");
+
+    regState.setTemp("RM", regState.getTemp("RB"));
 
     int32_t rz_val = 0;
     uint32_t next_pc = regState.getTemp("PC_TEMP");
@@ -731,12 +735,13 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
     
     uint32_t opcode = decodedInst.opcode;
     uint32_t funct3 = decodedInst.funct3;
+
+    regState.setTemp("MDR", regState.getTemp("RM"));
+    regState.setTemp("MAR", regState.getTemp("RZ"));
     
     switch (opcode) {
         case 0x03: 
         {
-            regState.setTemp("MDR", regState.getTemp("RM"));
-            regState.setTemp("MAR", regState.getTemp("RZ"));
             uint32_t address = regState.getTemp("MAR");
             switch (funct3) {
                 case 0x0: // LB
@@ -762,8 +767,6 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
         }
         case 0x23: 
         {
-            regState.setTemp("MDR", regState.getTemp("RM"));
-            regState.setTemp("MAR", regState.getTemp("RZ"));
             uint32_t address = regState.getTemp("MAR");
             uint32_t data = regState.getTemp("MDR");
             switch (funct3) {
