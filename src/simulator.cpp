@@ -664,6 +664,104 @@ void Simulator::stageExecute() {
     regState.setTemp("RM", regState.getTemp("RB"));
 }
 
+void Simulator::stageMemory() {
+    if (!ex_mem.valid) {
+        mem_wb.valid = false;
+        return;
+    }
+    
+    if (ex_mem.terminate){
+        mem_wb.terminate = true;
+    }
+
+    mem_wb.rd = ex_mem.rd;
+    mem_wb.reg_write = ex_mem.reg_write;
+    mem_wb.valid = true;
+    
+    // Default: pass ALU result to WB stage
+    uint32_t result = regState.getTemp("RZ");
+    
+    // For debugging/tracing
+    if (trace_instruction && instructions_executed == trace_instruction_num) {
+        cout << "Cycle " << clock << ": Instruction " << trace_instruction_num 
+             << " in memory stage" << endl;
+    }
+
+    uint32_t address = regState.getTemp("RZ");
+    
+    // Handle memory operations
+    if (ex_mem.mem_read) {
+        switch (ex_mem.mem_width) {
+            case 0x0: // LB - Load Byte
+                result = static_cast<int32_t>(static_cast<int8_t>(memory.readByte(address)));
+                break;
+                
+            case 0x1: // LH - Load Half-word
+                result = static_cast<int32_t>(static_cast<int16_t>(memory.readHalf(address)));
+                break;
+                
+            case 0x2: // LW - Load Word
+                result = memory.readWord(address);
+                break;
+                
+            case 0x4: // LBU - Load Byte Unsigned
+                result = static_cast<uint32_t>(memory.readByte(address));
+                break;
+                
+            case 0x5: // LHU - Load Half-word Unsigned
+                result = static_cast<uint32_t>(memory.readHalf(address));
+                break;
+                
+            default:
+                cerr << "Error: Unknown load width: 0x" << hex << ex_mem.mem_width << dec << endl;
+                break;
+        }
+        
+        // Update MDR with loaded value
+        regState.setTemp("MDR", result);
+        regState.setTemp("RY", result);
+        
+        // For statistics
+        data_transfer_instructions++;
+    } else if (ex_mem.mem_write) {
+        uint32_t data = ex_mem.rs2_val;
+        
+        switch (ex_mem.mem_width) {
+            case 0x0: // SB - Store Byte
+                memory.writeByte(address, data & 0xFF);
+                break;
+                
+            case 0x1: // SH - Store Half-word
+                memory.writeHalf(address, data & 0xFFFF);
+                break;
+                
+            case 0x2: // SW - Store Word
+                memory.writeWord(address, data);
+                break;
+                
+            default:
+                cerr << "Error: Unknown store width: 0x" << hex << ex_mem.mem_width << dec << endl;
+                break;
+        }
+        
+        // For statistics
+        data_transfer_instructions++;
+        
+       
+        mem_wb.reg_write = false;
+    } else {
+        
+        regState.setTemp("RY", result);
+    }
+    
+    
+    if (ex_mem.branch_taken) {
+        // Branch was taken, update statistics
+        control_instructions++;
+    }
+}
+
+
 
 //function to fetch instruction
 void Simulator::fetch() {
