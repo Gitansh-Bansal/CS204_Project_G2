@@ -242,15 +242,14 @@ void runConsole(Simulator& simulator) {
 
 int main(int argc, char** argv) {
     cout << "\n[Phase 1] Generating machine code...\n";
-    if (generateMC()) 
-    {
+    if (generateMC()){
         cerr << "Error: Failed to generate machine code.\n";
         return 1;
     } else {
         cout << "Machine code generated successfully.\n";
     }
 
-    cout << "\n[Phase 2/3] Initializing RISC-V Simulator...\n";
+    cout << "\n[Phase 2 / 3] Initializing RISC-V Simulator...\n";
     Simulator simulator;
 
     if (!simulator.loadProgram("output.mc")) {
@@ -259,6 +258,14 @@ int main(int argc, char** argv) {
     }
 
     if (argc > 1 && string(argv[1]) == "--gui") {
+        simulator.enable_pipelining = false;
+        simulator.enable_data_forwarding = false;
+        simulator.print_registers_each_cycle = false;
+        simulator.print_pipeline_registers = false;
+        simulator.trace_instruction = false;
+        simulator.trace_instruction_num = -1;
+        simulator.enable_branch_prediction = false;
+        simulator.print_branch_prediction = false;
         wxEntryStart(argc, argv);
         wxTheApp->CallOnInit();
         wxTheApp->OnRun();
