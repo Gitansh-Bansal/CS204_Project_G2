@@ -461,8 +461,6 @@ void Simulator::stageDecode() {
             id_ex.is_jal = false;
             break;
     }
-<<<<<<< HEAD
-=======
 
     //knob 5
     if(trace_instruction && id_ex.pc == trace_instruction_num) {
@@ -523,18 +521,8 @@ void Simulator::stageDecode() {
     }
 
     
-    // Update statistics
-    if (id_ex.valid) {
-        if (id_ex.mem_read || id_ex.mem_write) {
-            data_transfer_instructions++;
-        } else if (id_ex.branch || id_ex.jump) {
-            control_instructions++;
-        } else {
-            alu_instructions++;
-        }
-    }
     
->>>>>>> 4e42ee5001082f8696a1e61766b7fd8cb54ac7d8
+    
 }
 
 void Simulator::stageExecute() {
@@ -941,11 +929,7 @@ void Simulator::stageWriteBack() {
                 break;
         }
     }
-
-    if (trace_instruction && instructions_executed == trace_instruction_num) {
-        cout << "Cycle " << clock << ": Instruction " << trace_instruction_num 
-             << " in write back stage" << endl;
-    }
+    
     
     if (mem_wb.reg_write && mem_wb.rd != 0) {
         regState.setGen(mem_wb.rd, regState.getTemp("RY"));
