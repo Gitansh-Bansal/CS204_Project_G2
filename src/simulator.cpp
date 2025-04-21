@@ -761,12 +761,6 @@ void Simulator::stageMemory() {
         
         regState.setTemp("RY", result);
     }
-    
-    
-    if (ex_mem.branch_taken) {
-        // Branch was taken, update statistics
-        control_instructions++;
-    }
 }
 
 void Simulator::stageWriteBack() {
