@@ -19,8 +19,6 @@ void BranchPredictor::reset() {
 }
 
 bool BranchPredictor::predict(uint32_t pc) {
-    //total_predictions++;
-    
     // Align PC to 4-byte boundary
     uint32_t aligned_pc = pc & 0xFFFFFFFC;
     

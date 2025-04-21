@@ -27,6 +27,19 @@ Simulator::Simulator() {
     id_ex.terminate = false;
     ex_mem.terminate = false;
     mem_wb.terminate = false;
+
+    // Initialize statistics
+    total_cycles = 0;
+    instructions_executed = 0;
+    data_transfer_instructions = 0;
+    alu_instructions = 0;
+    control_instructions = 0;
+    pipeline_stalls = 0;
+    data_hazards = 0;
+    control_hazards = 0;
+    branch_mispredictions = 0;
+    stalls_data_hazards = 0;
+    stalls_control_hazards = 0;
         
     cout << "Simulator initialized!" << endl;
 }
@@ -51,6 +64,19 @@ void Simulator::reset() {
     id_ex.terminate = false;
     ex_mem.terminate = false;
     mem_wb.terminate = false;
+
+    // Reset statistics
+    total_cycles = 0;
+    instructions_executed = 0;
+    data_transfer_instructions = 0;
+    alu_instructions = 0;
+    control_instructions = 0;
+    pipeline_stalls = 0;
+    data_hazards = 0;
+    control_hazards = 0;
+    branch_mispredictions = 0;
+    stalls_data_hazards = 0;
+    stalls_control_hazards = 0;
     
     cout << "Simulator reset!" << endl;
 }
@@ -248,16 +274,13 @@ void Simulator::stageFetch() {
         if_id.instruction = 0x00000013;  // NOP instruction
         flush_if_id = false;
         
-        // For statistics
-        control_hazards++;
+        // Removed control_hazards increment from here to avoid double counting
     }
    
     
 }
 
 void Simulator::stageDecode() {
-
-    
     // Skip decode if stalled
     if (stall_id) {
         // Insert NOP in ID/EX buffer during stall
@@ -277,7 +300,6 @@ void Simulator::stageDecode() {
         return;
     }
 
-    
     // If flush is active, insert NOP in ID/EX buffer
     if (flush_id_ex) {
         id_ex.valid = false;
@@ -305,16 +327,15 @@ void Simulator::stageDecode() {
         id_ex.terminate = true;
     }
     
-    
     // Map the decoded instruction to the ID/EX buffer
     id_ex.pc = if_id.pc;
     id_ex.rd = decodedInst.rd;
     id_ex.rs1 = decodedInst.rs1;
     id_ex.rs2 = decodedInst.rs2;
+    id_ex.opcode = decodedInst.opcode;  // Set opcode
     id_ex.valid = true;
     
     // Set control signals based on the opcode
-    uint32_t opcode = decodedInst.opcode;
     uint32_t funct3 = decodedInst.funct3;
     uint32_t funct7 = decodedInst.funct7;
     
@@ -330,7 +351,7 @@ void Simulator::stageDecode() {
     id_ex.ALU_src = false;  // Default to using register
     
     // Set control signals based on opcode
-    switch (opcode) {
+    switch (decodedInst.opcode) {
         case 0x33: // R-type
             id_ex.reg_write = true;
             id_ex.ALU_src = false;
@@ -440,6 +461,8 @@ void Simulator::stageDecode() {
             id_ex.is_jal = false;
             break;
     }
+<<<<<<< HEAD
+=======
 
     //knob 5
     if(trace_instruction && id_ex.pc == trace_instruction_num) {
@@ -511,6 +534,7 @@ void Simulator::stageDecode() {
         }
     }
     
+>>>>>>> 4e42ee5001082f8696a1e61766b7fd8cb54ac7d8
 }
 
 void Simulator::stageExecute() {
@@ -531,6 +555,9 @@ void Simulator::stageExecute() {
     ex_mem.mem_read = id_ex.mem_read;
     ex_mem.mem_write = id_ex.mem_write;
     ex_mem.mem_width = id_ex.mem_width;
+    ex_mem.branch = id_ex.branch;
+    ex_mem.jump = id_ex.jump;
+    ex_mem.opcode = id_ex.opcode;  // Propagate opcode
     ex_mem.valid = true;
     ex_mem.branch_taken = false;
     
@@ -665,6 +692,7 @@ void Simulator::stageExecute() {
                     branch_mispredictions++;
                     control_hazards++;
                     stalls_control_hazards += 2;
+                    pipeline_stalls += 2;
                 }
             } else {
                 branch_predictor.update(id_ex.pc, id_ex.pc + 4, false);
@@ -678,6 +706,7 @@ void Simulator::stageExecute() {
                     branch_mispredictions++;
                     control_hazards++;
                     stalls_control_hazards += 2;
+                    pipeline_stalls += 2;
                 }
             }
         } else {
@@ -688,6 +717,7 @@ void Simulator::stageExecute() {
                 flush_id_ex = true;
                 control_hazards++;
                 stalls_control_hazards += 2;
+                pipeline_stalls += 2;
             }
         }
         
@@ -718,12 +748,21 @@ void Simulator::stageExecute() {
         
         // Update branch predictor if enabled
         if (branch_prediction_enabled) {
+            bool was_predicted = branch_predictor.was_predicted_taken(id_ex.pc);
+            uint32_t predicted_target = branch_predictor.get_target(id_ex.pc);
+            
             branch_predictor.update(id_ex.pc, jump_target, true);
+            
+            // Only count as misprediction if prediction was wrong
+            if (!was_predicted || predicted_target != jump_target) {
+                branch_mispredictions++;
+            }
         }
         
-        // Update statistics
+        // Always count control hazard for jumps
         control_hazards++;
         stalls_control_hazards += 2;
+        pipeline_stalls += 2;
     }
     // Store ALU result in EX/MEM buffer
     ex_mem.alu_result = alu_result;
@@ -769,6 +808,7 @@ void Simulator::stageMemory() {
 
     mem_wb.rd = ex_mem.rd;
     mem_wb.reg_write = ex_mem.reg_write;
+    mem_wb.opcode = ex_mem.opcode;  // Propagate opcode
     mem_wb.valid = true;
     mem_wb.pc = ex_mem.pc;
     
@@ -872,6 +912,41 @@ void Simulator::stageWriteBack() {
 
 
     
+    if (enable_pipelining) {
+        instructions_executed++;
+
+        // Classify instruction based on opcode from MEM/WB buffer
+        switch(mem_wb.opcode) {
+            case 0x03:  // Load instructions
+            case 0x23:  // Store instructions
+                data_transfer_instructions++;
+                break;
+                
+            case 0x63:  // Branch instructions
+            case 0x6F:  // JAL
+            case 0x67:  // JALR
+                control_instructions++;
+                break;
+                
+            case 0x33:  // R-type ALU instructions
+            case 0x13:  // I-type ALU instructions
+            case 0x37:  // LUI
+            case 0x17:  // AUIPC
+                alu_instructions++;
+                break;
+                
+            default:
+                cerr << "Unknown instruction type in WriteBack stage, opcode: 0x" 
+                     << hex << mem_wb.opcode << dec << endl;
+                break;
+        }
+    }
+
+    if (trace_instruction && instructions_executed == trace_instruction_num) {
+        cout << "Cycle " << clock << ": Instruction " << trace_instruction_num 
+             << " in write back stage" << endl;
+    }
+    
     if (mem_wb.reg_write && mem_wb.rd != 0) {
         regState.setGen(mem_wb.rd, regState.getTemp("RY"));
         
@@ -925,6 +1000,36 @@ Simulator::DecodedInstruction Simulator::decode() {
     DecodedInstruction decodedInst;
 
     decodedInst.opcode = instruction & 0x7F;
+
+    // For non-pipelined mode, classify instruction here
+    if (!enable_pipelining) {
+        instructions_executed++;
+        
+        switch(decodedInst.opcode) {
+            case 0x03:  // Load instructions
+            case 0x23:  // Store instructions
+                data_transfer_instructions++;
+                break;
+                
+            case 0x63:  // Branch instructions
+            case 0x6F:  // JAL
+            case 0x67:  // JALR
+                control_instructions++;
+                break;
+                
+            case 0x33:  // R-type ALU instructions
+            case 0x13:  // I-type ALU instructions
+            case 0x37:  // LUI
+            case 0x17:  // AUIPC
+                alu_instructions++;
+                break;
+                
+            default:
+                cerr << "Unknown instruction type in decode stage, opcode: 0x" 
+                     << hex << decodedInst.opcode << dec << endl;
+                break;
+        }
+    }
 
     switch(decodedInst.opcode) {
         case(0x33): // r type
@@ -1101,10 +1206,6 @@ void Simulator::execute(DecodedInstruction& decodedInst) {
                 case 0x6: // ORI
                     rz_val = rs1_val | imm_val;
                     break;
-                default:
-                    cout << "Unknown funct3: 0x" << hex << funct3 << dec << endl;
-                    regState.setIR(0xFFFFFFFF);
-                    break;    
             }
             break;
         }

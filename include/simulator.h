@@ -61,7 +61,8 @@ struct ID_EX_Buffer {
     uint32_t rs2;  
     bool valid;  
     bool ALU_src; 
-    bool is_jal;                   
+    bool is_jal;    
+    uint32_t opcode;
 };
 
 // EX/MEM Buffer
@@ -76,7 +77,10 @@ struct EX_MEM_Buffer {
     bool mem_write;    
     uint8_t mem_width;  
     bool branch_taken;
+    bool branch;
+    bool jump;
     bool valid;       
+    uint32_t opcode;
 };
 
 // MEM/WB Buffer
@@ -86,6 +90,7 @@ struct MEM_WB_Buffer {
     bool reg_write;  
     bool valid;   
     uint32_t pc;
+    uint32_t opcode;
 };
 
 
