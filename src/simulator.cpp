@@ -1367,3 +1367,103 @@ void Simulator::forwardData() {
         }
     }
 }
+
+
+
+void Simulator::printPipelineRegisters() const {
+    cout << "\n----- Pipeline Registers -----" << endl;
+    
+    // Print IF/ID Buffer contents
+    cout << "IF/ID Pipeline Register:" << endl;
+    if (if_id.valid) {
+        cout << "  PC: 0x" << hex << setw(8) << setfill('0') << if_id.pc << dec << endl;
+        cout << "  Instruction: 0x" << hex << setw(8) << setfill('0') << if_id.instruction << dec << endl;
+    }
+    cout << "  Valid: " << (if_id.valid ? "True" : "False") << endl;
+    
+    // Print ID/EX Buffer contents
+    cout << "\nID/EX Pipeline Register:" << endl;
+    if (id_ex.valid) {    
+        cout << "  PC: 0x" << hex << setw(8) << setfill('0') << id_ex.pc << dec << endl;
+        cout << "  RS1 (reg num): " << id_ex.rs1 << endl;
+        cout << "  RS2 (reg num): " << id_ex.rs2 << endl;
+        cout << "  RD: " << id_ex.rd << endl;
+        cout << "  RegWrite: " << (id_ex.reg_write ? "True" : "False") << endl;
+        cout << "  MemRead: " << (id_ex.mem_read ? "True" : "False") << endl;
+        cout << "  MemWrite: " << (id_ex.mem_write ? "True" : "False") << endl;
+        cout << "  Branch: " << (id_ex.branch ? "True" : "False") << endl;
+        cout << "  Jump: " << (id_ex.jump ? "True" : "False") << endl;
+        
+        // Print ALU operation
+        cout << "  ALU Operation: ";
+        switch (id_ex.alu_op) {
+            case ADD: cout << "ADD"; break;
+            case SUB: cout << "SUB"; break;
+            case MUL: cout << "MUL"; break;
+            case SLL: cout << "SLL"; break;
+            case SLT: cout << "SLT"; break;
+            case XOR: cout << "XOR"; break;
+            case DIV: cout << "DIV"; break;
+            case SRL: cout << "SRL"; break;
+            case SRA: cout << "SRA"; break;
+            case OR: cout << "OR"; break;
+            case REM: cout << "REM"; break;
+            case AND: cout << "AND"; break;
+            case LUI: cout << "LUI"; break;
+            case AUIPC: cout << "AUIPC"; break;
+            case NONE: cout << "NONE"; break;
+            default: cout << "UNKNOWN"; break;
+        }
+        cout << endl;
+        
+        // Print branch condition
+        cout << "  Branch Condition: ";
+        switch (id_ex.branch_cond) {
+            case BranchCondition::BEQ: cout << "BEQ"; break;
+            case BranchCondition::BNE: cout << "BNE"; break;
+            case BranchCondition::BLT: cout << "BLT"; break;
+            case BranchCondition::BGE: cout << "BGE"; break;
+            case BranchCondition::INVALID: cout << "INVALID"; break;
+            default: cout << "UNKNOWN"; break;
+        }
+        cout << endl;
+        
+        cout << "  Memory Width: " << static_cast<int>(id_ex.mem_width) << endl;
+        cout << "  Terminate: " << (id_ex.terminate ? "True" : "False") << endl;
+    }
+    cout << "  Valid: " << (id_ex.valid ? "True" : "False") << endl;
+    
+    // Print EX/MEM Buffer contents
+    cout << "\nEX/MEM Pipeline Register:" << endl;
+    if (ex_mem.valid) {
+        cout << "  PC: 0x" << hex << setw(8) << setfill('0') << ex_mem.pc << dec << endl;
+        cout << "  ALU Result: 0x" << hex << setw(8) << setfill('0') << ex_mem.alu_result << dec << endl;
+        cout << "  RD: " << ex_mem.rd << endl;
+        cout << "  RegWrite: " << (ex_mem.reg_write ? "True" : "False") << endl;
+        cout << "  MemRead: " << (ex_mem.mem_read ? "True" : "False") << endl;
+        cout << "  MemWrite: " << (ex_mem.mem_write ? "True" : "False") << endl;
+        cout << "  Memory Width: " << static_cast<int>(ex_mem.mem_width) << endl;
+        cout << "  Branch Taken: " << (ex_mem.branch_taken ? "True" : "False") << endl;
+        cout << "  Terminate: " << (ex_mem.terminate ? "True" : "False") << endl;
+    }
+    cout << "  Valid: " << (ex_mem.valid ? "True" : "False") << endl;
+    
+    // Print MEM/WB Buffer contents
+    cout << "\nMEM/WB Pipeline Register:" << endl;
+    if (mem_wb.valid) {
+        cout << "  Result: 0x" << hex << setw(8) << setfill('0') << regState.getTemp("RY") << dec << endl;
+        cout << "  RD: " << mem_wb.rd << endl;
+        cout << "  RegWrite: " << (mem_wb.reg_write ? "True" : "False") << endl;
+        cout << "  Terminate: " << (mem_wb.terminate ? "True" : "False") << endl;
+    }
+    cout << "  Valid: " << (mem_wb.valid ? "True" : "False") << endl;
+    
+    // Print pipeline control signals
+    cout << "\nPipeline Control Signals:" << endl;
+    cout << "  Stall IF: " << (stall_if ? "True" : "False") << endl;
+    cout << "  Stall ID: " << (stall_id ? "True" : "False") << endl;
+    cout << "  Flush IF/ID: " << (flush_if_id ? "True" : "False") << endl;
+    cout << "  Flush ID/EX: " << (flush_id_ex ? "True" : "False") << endl;
+    
+    cout << "=================================================" << endl;
+}
