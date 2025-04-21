@@ -4,9 +4,31 @@
 
 // Constructor
 Simulator::Simulator() {
-    pc=0;
-    clock=0;
-    cout<<"Simulator initialized!"<<endl;
+    pc = 0;
+    clock = 1;
+    
+    // Initialize pipeline control knobs
+    enable_pipelining = true;
+    enable_data_forwarding = true;
+    print_registers_each_cycle = false;
+    print_pipeline_registers = true;
+    trace_instruction = false;
+    trace_instruction_num = 0;
+    print_branch_prediction = true;
+    branch_prediction_enabled = true;
+
+    // Initialize pipeline buffers
+    if_id.valid = false;
+    id_ex.valid = false;
+    ex_mem.valid = false;
+    mem_wb.valid = false;
+    
+    if_id.terminate = false;
+    id_ex.terminate = false;
+    ex_mem.terminate = false;
+    mem_wb.terminate = false;
+        
+    cout << "Simulator initialized!" << endl;
 }
 
 //funnction to reset the simulator
@@ -14,7 +36,23 @@ void Simulator::reset() {
     regState.reset();
     memory.reset();
     pc = 0;
-    clock = 0;
+    clock = 1;
+        
+    // Reset branch predictor
+    branch_predictor.reset();
+    
+    // Reset pipeline buffers
+    if_id.valid = false;
+    id_ex.valid = false;
+    ex_mem.valid = false;
+    mem_wb.valid = false;
+    
+    if_id.terminate = false;
+    id_ex.terminate = false;
+    ex_mem.terminate = false;
+    mem_wb.terminate = false;
+    
+    cout << "Simulator reset!" << endl;
 }
 
 //function to load program from a file
@@ -24,39 +62,101 @@ bool Simulator::loadProgram(const string& filename) {
 
 //function to run the simulation
 void Simulator::run() {
-
-    while (isRunning()) {
+    while (true) {
+        // Execute one step
         step();
+        
+        // Check termination conditions
+        if (enable_pipelining) {
+            // For pipelined mode, check if we've hit termination and drained the pipeline
+            if (mem_wb.terminate) {
+                cout << "Simulation ended after " << clock -1 << " cycles." << endl;
+                break;
+            }
+        } else {
+            // For non-pipelined mode
+            if (regState.getIR() == 0xffffffff) {
+                cout << "Simulation ended after " << clock -1 << " cycles." << endl;
+                break;
+            }
+        }
     }
-    cout << "Simulation ended after " << clock << " cycles." << endl;
 }
 
 //function to run single instruction
 void Simulator::step() {
-    cout << "\n===== Cycle " << dec << clock << " =====" << endl;
-
-    if (pipeliningEnabled) {
-        fetchPipeline();
-        decodePipeline();
-        executePipeline();
-        memoryAccessPipeline();
-        writeBackPipeline();
-        clock++;
+    cout<<"=============== Cycle "<<clock<<" ==============="<<endl;
+    // Check if already terminated
+    if (enable_pipelining && mem_wb.terminate) {
+        cout << "Program execution has already completed. No more instructions to execute." << endl;
+        return;
+    } else if (!enable_pipelining && regState.getIR() == 0xffffffff) {
+        cout << "Program execution has already completed. No more instructions to execute." << endl;
+        return;
     }
-    else {
+
+    if (enable_pipelining) {
+        // Execute pipeline stages in reverse order
+        if (!enable_data_forwarding) detectHazards();
+
+        cout<<endl<<"stageWriteBack"<<endl;
+        stageWriteBack();
+        cout<<endl<<"stageMemory"<<endl;
+        stageMemory();
+        cout<<endl<<"stageExecute"<<endl;
+        stageExecute();
+        cout<<endl<<"stageDecode"<<endl;
+        stageDecode();
+        cout<<endl<<"stageFetch"<<endl;
+        if (!if_id.terminate) stageFetch();
+        
+        // Detect hazards for next cycle
+        if (enable_data_forwarding) forwardData();
+
+        // Update statistics
+        clock++;
+        
+        // Print debug information if enabled
+        if (print_registers_each_cycle) {
+            cout<<"\n---------- Registers ----------\n";
+            printRegisters();
+        }
+        
+        if (print_pipeline_registers) printPipelineRegisters();
+
+        if(print_branch_prediction) branch_predictor.print_state();
+
+    } else {
+        // Non-pipelined implementation
         fetch();
-        if (!isRunning()) return;
         DecodedInstruction decodedInst = decode();
         execute(decodedInst);
         memoryAccess(decodedInst);
         writeBack(decodedInst);
-        clock++;
+        clock+=5;
+
+        // Print debug information if enabled
+        if (print_registers_each_cycle) {
+            cout<<"\n---------- Registers ----------\n";
+            printRegisters();
+        }
     }
 }
 
 // function to check if the simulator is running
 bool Simulator::isRunning() const {
-    return regState.getIR()!=0xffffffff;
+    // Check if we've reached a termination condition
+    if (mem_wb.terminate) {
+        return false;
+    }
+    
+    // Check if there are still valid instructions in the pipeline
+    if (enable_pipelining) {
+        return if_id.valid || id_ex.valid || ex_mem.valid || mem_wb.valid;
+    }
+    
+    // For non-pipelined mode
+    return regState.getIR() != 0xffffffff;
 }
 
 //function to get the current clock cycle
@@ -74,378 +174,9 @@ void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr, char format)
     memory.printMemory(start_addr, end_addr, format);
 }
 
-// fetch function for pipelined version
-// takes care of the stalls and calls the non-pipelined fetch function
-void Simulator::fetchPipeline() {
-    if (control.isFetchEmpty()) {
-        fetch();
-        return;
-    }
-    FetchControl fetchCtrl = control.getFetchControl();
-    if (fetchCtrl.stall) {
-        cout << "Fetch stage is stalled." << endl;
-        return;
-    }
-    if (fetchCtrl.flush) {
-        cout << "Fetch stage is flushed." << endl;
-        return;
-    }
-    fetch();
-}
-
-// decode function for pipelined version
-void Simulator::decodePipeline() {
-    if (control.isDecodeEmpty()) {
-        cout << "Decode stage: Control queue empty, skipping." << endl;
-        return;
-    }
-    DecodeControl decodeCtrl = control.getDecodeControl();
-    if (decodeCtrl.stall) {
-        cout << "Decode stage is stalled." << endl;
-        return;
-    }
-
-    DecodedInstruction decodedInst = decode(); // decodes the instruction using non-pipelined decode function
-    if (regState.getIR() == 0xffffffff) {
-        cout << "Decode stage: Termination instruction detected." << endl;
-        return;
-    }
-
-    ExecuteControl exeCtrl;
-    MemoryControl memCtrl;
-    WriteBackControl wbCtrl;
-
-    switch (decodedInst.opcode) {
-        case 0x33: // R-type
-            exeCtrl.aluSrc = false; // use rs2
-            switch (decodedInst.funct3) {
-                case 0x0: 
-                    if (decodedInst.funct7 == 0x00) exeCtrl.aluOp = ADD;
-                    else if (decodedInst.funct7 == 0x20) exeCtrl.aluOp = SUB;
-                    else if (decodedInst.funct7 == 0x01) exeCtrl.aluOp = MUL;
-                    else exeCtrl.aluOp = NONE; // unknown funct7
-                    break;
-                case 0x1: exeCtrl.aluOp = SLL; break; 
-                case 0x2: exeCtrl.aluOp = SLT; break; 
-                case 0x4: 
-                    if (decodedInst.funct7 == 0x00) exeCtrl.aluOp = XOR;
-                    else if (decodedInst.funct7 == 0x01) exeCtrl.aluOp = DIV; 
-                    else exeCtrl.aluOp = NONE;
-                    break;
-                case 0x5: 
-                    if (decodedInst.funct7 == 0x00) exeCtrl.aluOp = SRL;
-                    else if (decodedInst.funct7 == 0x20) exeCtrl.aluOp = SRA;
-                    else exeCtrl.aluOp = NONE;
-                    break;
-                case 0x6: 
-                    if (decodedInst.funct7 == 0x00) exeCtrl.aluOp = OR;
-                     else if (decodedInst.funct7 == 0x01) exeCtrl.aluOp = REM; 
-                    else exeCtrl.aluOp = NONE;
-                    break;
-                case 0x7: exeCtrl.aluOp = AND; break; 
-                default: exeCtrl.aluOp = NONE; break; // invalid funct3
-            }
-            wbCtrl.regWrite = (decodedInst.rd != 0);    // dont write to x0
-            wbCtrl.memToReg = false;
-            break;
-
-        case 0x13: // I-type 
-            exeCtrl.aluSrc = true; // use immediate 
-            switch (decodedInst.funct3) {
-                case 0x0: exeCtrl.aluOp = ADD; break;  // ADDI
-                case 0x6: exeCtrl.aluOp = OR; break;   // ORI
-                case 0x7: exeCtrl.aluOp = AND; break;  // ANDI
-                default: exeCtrl.aluOp = NONE; break; // invalid funct3
-            }
-            wbCtrl.regWrite = (decodedInst.rd != 0);
-            wbCtrl.memToReg = false;
-            break;
-
-        case 0x03: // I-type load
-            exeCtrl.aluSrc = true; // use imm
-            exeCtrl.aluOp = ADD; // address: RA + IMM
-            memCtrl.memRead = true;
-            memCtrl.memWrite = false;
-            switch (decodedInst.funct3) {
-                case 0x0: memCtrl.memWidth = 1; memCtrl.signExtend = true; break;  // LB
-                case 0x1: memCtrl.memWidth = 2; memCtrl.signExtend = true; break;  // LH
-                case 0x2: memCtrl.memWidth = 4; memCtrl.signExtend = false; break; // LW
-                //case 0x3: memCtrl.memWidth = 8; memCtrl.signExtend = false; break; // LD
-                default: memCtrl.memRead = false; break; // invalid func3
-            }
-            wbCtrl.regWrite = (decodedInst.rd != 0) && memCtrl.memRead; // write only if valid load and rd!=x0
-            wbCtrl.memToReg = memCtrl.memRead; // write from memory to register
-            break;
-
-        case 0x23: // S-type 
-            exeCtrl.aluSrc = true; // use imm
-            exeCtrl.aluOp = ADD; // address: RA + IMM
-            memCtrl.memRead = false;
-            memCtrl.memWrite = true;
-            switch (decodedInst.funct3) {
-                case 0x0: memCtrl.memWidth = 1; break; // SB
-                case 0x1: memCtrl.memWidth = 2; break; // SH
-                case 0x2: memCtrl.memWidth = 4; break; // SW
-                default: memCtrl.memWrite = false; break; // invalid func3
-            }
-            wbCtrl.regWrite = false;
-            wbCtrl.memToReg = false;
-            break;
-
-            case 0x63: // SB-type
-            exeCtrl.aluSrc = false; // use rs2
-            exeCtrl.branch = true; 
-            exeCtrl.aluOp = SUB; // generally sub is used in ALU for branch comparison
-
-            switch (decodedInst.funct3) {
-                case 0x0: 
-                    exeCtrl.branchType = BEQ;
-                    break;
-                case 0x1:
-                    exeCtrl.branchType = BNE;
-                    break;
-                case 0x4:
-                    exeCtrl.branchType = BLT;
-                    break;
-                case 0x5: 
-                    exeCtrl.branchType = BGE;
-                    break;
-                default:
-                    cout << "  Warning: Invalid funct3 (0x" << hex << decodedInst.funct3 << dec << ") for Branch opcode. Treating as invalid." << endl;
-                    exeCtrl.branchType = INVALID;
-                    exeCtrl.branch = false; // invalid branch
-                    exeCtrl.aluOp = NONE; 
-                    break;
-            }
-            memCtrl.memRead = false;
-            memCtrl.memWrite = false;
-            wbCtrl.regWrite = false;
-            wbCtrl.memToReg = false;
-            break;
-
-        case 0x6F: // UJ-type 
-            exeCtrl.aluOp = ADD; // target: PC + imm (execute needs PC)
-            exeCtrl.jump = true;
-            // writes PC+4 to rd
-            wbCtrl.regWrite = (decodedInst.rd != 0);
-            wbCtrl.memToReg = false; 
-            break;
-
-        case 0x67: // I-type JALR
-            exeCtrl.aluSrc = true; // use imm
-            exeCtrl.aluOp = ADD; // address: RA + IMM
-            exeCtrl.jump = true;
-            // writes PC+4 to rd
-            wbCtrl.regWrite = (decodedInst.rd != 0);
-            wbCtrl.memToReg = false; 
-            break;
-
-        case 0x37: // U-type LUI
-            exeCtrl.aluSrc = true; // use imm
-            exeCtrl.aluOp = LUI; 
-            wbCtrl.regWrite = (decodedInst.rd != 0);
-            wbCtrl.memToReg = false; 
-            break;
-
-        case 0x17: // U-type AUIPC
-            exeCtrl.aluSrc = true; // use imm
-            exeCtrl.aluOp = AUIPC; 
-            wbCtrl.regWrite = (decodedInst.rd != 0);
-            wbCtrl.memToReg = false; 
-            break;
-
-        default:
-            cout << "  Decode stage: unrecognized opcode." << endl;
-            break;
-    }
-
-
-
-    control.addExecuteControl(exeCtrl);
-    control.addMemoryControl(memCtrl);
-    control.addWriteBackControl(wbCtrl);
-
-    // cout << "  Generated Controls -> EX:{op:" << static_cast<int>(exeCtrl.aluOp) << ", aluSrc:" << exeCtrl.aluSrc << ", branch:" << exeCtrl.branch << ", jump:" << exeCtrl.jump << "}"
-        //  << " MEM:{memRead:" << memCtrl.memRead << ", memWrite:" << memCtrl.memWrite << ", width:" << memCtrl.memWidth << ", signExt:" << memCtrl.signExtend << "}"
-        //  << " WB:{regWrite:" << wbCtrl.regWrite << ", memToReg:" << wbCtrl.memToReg << ", rd:" << wbCtrl.rd << "}" << endl;
-
-
-    // fetch control for next cycle
-    control.addFetchControl();
-
-    // add decode control for next cycle
-    control.addDecodeControl();
-
-    // Hazard Detection Logic 
-}
-
-
-void Simulator::executePipeline() {
-    if (control.isExecuteEmpty()) {
-        cout << "Execute stage: Control queue empty, skipping." << endl;
-        return;
-    }
-
-    ExecuteControl exeCtrl = control.getExecuteControl();
-    if (exeCtrl.stall) {
-        cout << "Execute stage is stalled." << endl;
-        return;
-    }
-
-    if (exeCtrl.flush) {
-        cout << "Execute stage is flushed." << endl;
-        return;
-    }
-
-    //check for termination instruction
-    if (regState.getIR() == 0xffffffff) {
-        cout << "Execute stage: Termination instruction detected." << endl;
-        return;
-    }
-
-    // get the values from the register state
-    int32_t rs1_val = regState.getTemp("RA");
-    int32_t rs2_val = regState.getTemp("RB");
-    int32_t imm_val = regState.getTemp("IMM");
-
-    regState.setTemp("RM", regState.getTemp("RB"));
-
-    int32_t rz_val = 0;
-    uint32_t next_pc = regState.getTemp("PC_TEMP");
-
-    //switch case for ALU operations
-    switch(exeCtrl.aluOp) {
-        case ADD:
-            if(exeCtrl.jump) {
-                rz_val = regState.getTemp("PC_TEMP");
-                next_pc = regState.getPC() + imm_val;  
-            }
-            //check if rs2 is used or immediate value is used
-            else if (exeCtrl.aluSrc) {
-                rz_val = rs1_val + imm_val;
-            } else {
-                rz_val = rs1_val + rs2_val;
-            }
-            break;
-
-        case SUB:
-            rz_val = rs1_val - rs2_val;
-            //check if its branch operation or not then update the next pc
-            if (exeCtrl.branch) {
-                //check branch and update PCtemp accordingly
-                switch(exeCtrl.branchType)
-                {
-                    case BEQ:
-                        if(rz_val == 0) {
-                            next_pc = regState.getPC() + imm_val;
-                        } 
-                        break;
-                    case BNE:
-                        if(rz_val != 0) {
-                            next_pc = regState.getPC() + imm_val;
-                        } 
-                        break;
-                    case BLT:
-                        if(rz_val < 0) {
-                            next_pc = regState.getPC() + imm_val;
-                        } 
-                        break;  
-                    case BGE:
-                        if(rz_val >= 0) {
-                            next_pc = regState.getPC() + imm_val;
-                        } 
-                        break;
-                    default:
-                        cout << "Unknown branch type." << endl;
-                        regState.setIR(0xFFFFFFFF);
-                        break;            
-                }
-            } 
-    
-            break;
-        case MUL:
-            rz_val = rs1_val * rs2_val;
-            break;
-
-        case SLL:
-            rz_val = rs1_val << (rs2_val & 0x1F);
-            break;
-        case SLT:
-            rz_val = (rs1_val < rs2_val) ? 1 : 0;
-            break;
-        case XOR:
-            rz_val = rs1_val ^ rs2_val;
-            break;
-        case DIV:
-            rz_val = (rs2_val != 0) ? (rs1_val / rs2_val) : -1;
-            break;
-        case SRL:
-            rz_val = static_cast<uint32_t>(rs1_val) >> (rs2_val & 0x1F);
-            break;
-        case SRA:
-            rz_val = rs1_val >> (rs2_val & 0x1F);
-            break;
-
-        case AND:
-            if(exeCtrl.aluSrc) {
-                rz_val = rs1_val & imm_val;
-            } else {
-                rz_val = rs1_val & rs2_val;
-            }
-            break;
-
-        case OR:
-            if(exeCtrl.aluSrc) {
-                rz_val = rs1_val | imm_val;
-            } else {
-                rz_val = rs1_val | rs2_val;
-            }
-            break;
-
-        case REM:
-            rz_val = (rs2_val != 0) ? (rs1_val % rs2_val) : rs1_val;
-            break;
-        case ADDI:
-            rz_val = rs1_val + imm_val;
-            break;
-        case ANDI:
-            rz_val = rs1_val & imm_val;
-            break;
-        case ORI:
-            rz_val = rs1_val | imm_val;
-            break;
-    
-
-
-        case LUI:
-            rz_val = imm_val; // LUI operation
-            break;
-        case AUIPC:
-            rz_val = regState.getPC() + imm_val; // AUIPC operation
-            break;
-        default:
-            cout << "Unknown ALU operation." << endl;
-            regState.setIR(0xFFFFFFFF);
-    }
-
-    //set the values in the register state  
-    regState.setTemp("RZ", rz_val);
-    regState.setPC(next_pc); // update the PC
-
-
-
-}
-
-
-
-
-
-
-
 
 //function to fetch instruction
 void Simulator::fetch() {
-    cout << "FETCH STAGE:\n";
     uint32_t PC = regState.getPC();
     if(PC%4!=0) {   
         cerr << "Error: Unaligned memory access at address 0x" << hex << PC << dec << endl;
@@ -464,7 +195,6 @@ void Simulator::fetch() {
 // function to perform decode stage
 Simulator::DecodedInstruction Simulator::decode() {
     uint32_t instruction = regState.getIR();
-    cout << "\nDECODE STAGE:\n";
     DecodedInstruction decodedInst;
 
     decodedInst.opcode = instruction & 0x7F;
