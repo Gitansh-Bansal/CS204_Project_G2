@@ -75,6 +75,14 @@ wxRISCVSimulatorFrame::wxRISCVSimulatorFrame(const wxString& title)
 
     // Set up the simulator
     m_simulator.reset();
+    m_simulator.enable_pipelining = false;
+    m_simulator.enable_data_forwarding = false;
+    m_simulator.print_registers_each_cycle = false;
+    m_simulator.print_pipeline_registers = false;
+    m_simulator.trace_instruction = false;
+    m_simulator.print_branch_prediction = false;
+    m_simulator.branch_prediction_enabled = false;
+    m_simulator.trace_instruction_num = -1;
     
     // Try to load the default program if it exists
     LoadProgram("output.mc");
