@@ -251,7 +251,7 @@ void Simulator::stageFetch() {
         // For statistics
         control_hazards++;
     }
-
+   
     
 }
 
@@ -510,6 +510,7 @@ void Simulator::stageDecode() {
             alu_instructions++;
         }
     }
+    
 }
 
 void Simulator::stageExecute() {
@@ -753,6 +754,7 @@ void Simulator::stageExecute() {
     // Store result in temporary register for compatibility with existing code
     regState.setTemp("RZ", alu_result);
     regState.setTemp("RM", regState.getTemp("RB"));
+    
 }
 
 void Simulator::stageMemory() {
@@ -860,6 +862,7 @@ void Simulator::stageMemory() {
         // Branch was taken, update statistics
         control_instructions++;
     }
+   
 }
 
 void Simulator::stageWriteBack() {
@@ -880,7 +883,8 @@ void Simulator::stageWriteBack() {
         cout << "Instruction Tracing (Knob5): Instruction PC 0x" << hex << trace_instruction_num << dec << endl;
         //print register file
         cout << "\nRegisters after write back:" << endl;
-        printRegisters();
+        regState.printGenRegisters();
+        
     }
     
     // check for data forwarding to resolve data hazards
@@ -894,6 +898,7 @@ void Simulator::stageWriteBack() {
             }
         }
     }
+    
 }
 
 

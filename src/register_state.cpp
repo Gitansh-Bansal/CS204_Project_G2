@@ -134,3 +134,18 @@ void RegisterState::printAll() const {
         cout << reg.first << ": 0x" << hex << setw(8) << setfill('0') << reg.second << dec << endl;
     }
 }
+
+void RegisterState::printGenRegisters() const {
+    cout << "General Purpose Registers:" << endl;
+    for(uint32_t i = 0; i < 32; i++) {
+        cout << "x" << dec <<i << ": 0x" << hex << setw(8) << setfill('0') << getGen(i);
+        
+        // Print 4 registers per line
+        if ((i + 1) % 4 == 0) {
+            cout << endl;
+        } else {
+            cout << "\t";
+        }
+    }
+    cout << endl;
+}

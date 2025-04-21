@@ -38,6 +38,7 @@ public:
     void setTemp(const string& reg_name, int32_t val);
     
     void printAll() const;
+    void printGenRegisters() const;
 };
 
 #endif 
