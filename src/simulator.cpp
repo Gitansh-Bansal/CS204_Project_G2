@@ -761,6 +761,35 @@ void Simulator::stageMemory() {
     }
 }
 
+void Simulator::stageWriteBack() {
+    if (!mem_wb.valid) {
+        return;
+    }
+    
+    if (trace_instruction && instructions_executed == trace_instruction_num) {
+        cout << "Cycle " << clock << ": Instruction " << trace_instruction_num 
+             << " in write back stage" << endl;
+    }
+    
+    if (mem_wb.reg_write && mem_wb.rd != 0) {
+        regState.setGen(mem_wb.rd, regState.getTemp("RY"));
+        
+        // for statistics
+        instructions_executed++;
+    }
+    
+    // check for data forwarding to resolve data hazards
+    if (enable_data_forwarding && mem_wb.reg_write && mem_wb.rd != 0) {
+        if (if_id.valid) {
+            uint32_t rs1 = (if_id.instruction >> 15) & 0x1F;
+            uint32_t rs2 = (if_id.instruction >> 20) & 0x1F;
+            
+            if (rs1 == mem_wb.rd || rs2 == mem_wb.rd) {
+                data_hazards++;
+            }
+        }
+    }
+}
 
 
 //function to fetch instruction
