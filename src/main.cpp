@@ -264,7 +264,7 @@ int main(int argc, char** argv) {
         simulator.print_pipeline_registers = false;
         simulator.trace_instruction = false;
         simulator.trace_instruction_num = -1;
-        simulator.enable_branch_prediction = false;
+        simulator.branch_prediction_enabled = false;
         simulator.print_branch_prediction = false;
         wxEntryStart(argc, argv);
         wxTheApp->CallOnInit();
