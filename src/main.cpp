@@ -291,7 +291,8 @@ int main(int argc, char** argv) {
         wxEntryCleanup();
     } else {
         configurePipelineKnobs(simulator);  
-        runConsole(simulator);              
+        runConsole(simulator);         
+        simulator.printStatistics(true);     
     }
     return 0;
 }
