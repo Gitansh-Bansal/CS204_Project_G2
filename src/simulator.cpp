@@ -728,9 +728,7 @@ void Simulator::stageMemory() {
         // Update MDR with loaded value
         regState.setTemp("MDR", result);
         regState.setTemp("RY", result);
-        
-        // For statistics
-        data_transfer_instructions++;
+       
     } else if (ex_mem.mem_write) {
         uint32_t data = ex_mem.rs2_val;
         
@@ -751,10 +749,6 @@ void Simulator::stageMemory() {
                 cerr << "Error: Unknown store width: 0x" << hex << ex_mem.mem_width << dec << endl;
                 break;
         }
-        
-        // For statistics
-        data_transfer_instructions++;
-        
        
         mem_wb.reg_write = false;
     } else {
