@@ -269,27 +269,21 @@ int main(int argc, char** argv) {
     }
 
     cout << "\n[Phase 2 / 3] Initializing RISC-V Simulator...\n";
-    Simulator simulator;
 
-    if (!simulator.loadProgram("output.mc")) {
-        cerr << "Error: Failed to load machine code.\n";
-        return 1;
-    }
 
     if (argc > 1 && string(argv[1]) == "--gui") {
-        simulator.enable_pipelining = false;
-        simulator.enable_data_forwarding = false;
-        simulator.print_registers_each_cycle = false;
-        simulator.print_pipeline_registers = false;
-        simulator.trace_instruction = false;
-        simulator.print_branch_prediction = false;
-        simulator.branch_prediction_enabled = false;
-        simulator.trace_instruction_num = -1;
         wxEntryStart(argc, argv);
         wxTheApp->CallOnInit();
         wxTheApp->OnRun();
         wxEntryCleanup();
     } else {
+        Simulator simulator;
+
+        if (!simulator.loadProgram("output.mc")) {
+            cerr << "Error: Failed to load machine code.\n";
+            return 1;
+        }
+        
         configurePipelineKnobs(simulator);  
         runConsole(simulator);         
         simulator.printStatistics(true);     
