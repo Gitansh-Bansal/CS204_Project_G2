@@ -1467,3 +1467,77 @@ void Simulator::printPipelineRegisters() const {
     
     cout << "=================================================" << endl;
 }
+
+
+
+// Enable/disable pipelining
+void Simulator::setKnob1(bool enabled) {
+    enable_pipelining = enabled;
+    
+    // Reset pipeline buffers if enabled
+    if (enabled) {
+        // Reset IF/ID buffer
+        if_id = {};
+        if_id.valid = false;
+        if_id.terminate = false;
+
+        // Reset ID/EX buffer
+        id_ex = {};
+        id_ex.valid = false;
+        id_ex.terminate = false;
+
+        // Reset EX/MEM buffer
+        ex_mem = {};
+        ex_mem.valid = false;
+        ex_mem.terminate = false;
+
+        // Reset MEM/WB buffer
+        mem_wb = {};
+        mem_wb.valid = false;
+        mem_wb.terminate = false;
+
+        // Initialize IF stage with first instruction
+        if_id.valid = true;
+        if_id.pc = pc;
+    }
+}
+
+// Enable/disable data forwarding
+void Simulator::setKnob2(bool enabled) {
+    enable_data_forwarding = enabled;
+    
+    // Reset related stats
+    data_hazards = 0;
+    stalls_data_hazards = 0;
+    pipeline_stalls = 0;
+}
+
+// Enable/disable register file printing
+void Simulator::setKnob3(bool enabled) {
+    print_registers_each_cycle = enabled;
+}
+
+// Enable/disable pipeline state printing
+void Simulator::setKnob4(bool enabled) {
+    print_pipeline_registers = enabled;
+    
+}
+
+// Instruction trace selector (Knob5)
+void Simulator::setKnob5(int target_instr) {
+    trace_instruction_num = target_instr;
+    trace_instruction = (target_instr >= 0);
+
+    if (trace_instruction) {
+        cout << "Tracing enabled for instruction number: " << trace_instruction_num << endl;
+    } else {
+        cout<< "Invalid instruction number for tracing. Tracing disabled." << endl;
+        
+    }
+}
+
+// Enable/disable branch predictor state printing
+void Simulator::setKnob6(bool enabled) {
+    print_branch_prediction = enabled;
+
+}
