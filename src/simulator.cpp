@@ -854,7 +854,7 @@ Simulator::DecodedInstruction Simulator::decode() {
             regState.setTemp("RA", regState.getGen(decodedInst.rs1));
             regState.setTemp("RB", regState.getGen(decodedInst.rs2));
             regState.setTemp("IMM", decodedInst.imm);
-            // regState.setTemp("RM", regState.getGen(decodedInst.rs2));
+            regState.setTemp("RM", regState.getGen(decodedInst.rs2));
             break;
         case(0x63): // sb type
             decodedInst.funct3 = (instruction >> 12) & 0x07;
@@ -907,10 +907,7 @@ Simulator::DecodedInstruction Simulator::decode() {
 }
 
 // function to perform execute stage
-void Simulator::execute(DecodedInstruction& decodedInst) 
- {
-    cout << "\nEXECUTE:\n";
-    
+void Simulator::execute(DecodedInstruction& decodedInst) {    
     uint32_t opcode = decodedInst.opcode;
     uint32_t funct3 = decodedInst.funct3;
     uint32_t funct7 = decodedInst.funct7;
@@ -918,8 +915,6 @@ void Simulator::execute(DecodedInstruction& decodedInst)
     int32_t rs1_val = regState.getTemp("RA");
     int32_t rs2_val = regState.getTemp("RB");
     int32_t imm_val = regState.getTemp("IMM");
-
-    regState.setTemp("RM", regState.getTemp("RB"));
 
     int32_t rz_val = 0;
     uint32_t next_pc = regState.getTemp("PC_TEMP");
@@ -1082,13 +1077,12 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
     
     uint32_t opcode = decodedInst.opcode;
     uint32_t funct3 = decodedInst.funct3;
-
-    regState.setTemp("MDR", regState.getTemp("RM"));
-    regState.setTemp("MAR", regState.getTemp("RZ"));
     
     switch (opcode) {
         case 0x03: 
         {
+            regState.setTemp("MDR", regState.getTemp("RM"));
+            regState.setTemp("MAR", regState.getTemp("RZ"));
             uint32_t address = regState.getTemp("MAR");
             switch (funct3) {
                 case 0x0: // LB
@@ -1114,6 +1108,8 @@ void Simulator::memoryAccess(DecodedInstruction& decodedInst) {
         }
         case 0x23: 
         {
+            regState.setTemp("MDR", regState.getTemp("RM"));
+            regState.setTemp("MAR", regState.getTemp("RZ"));
             uint32_t address = regState.getTemp("MAR");
             uint32_t data = regState.getTemp("MDR");
             switch (funct3) {
@@ -1205,5 +1201,89 @@ void Simulator::writeBack(DecodedInstruction& decodedInst) {
         regState.setGen(rd, result);
     } else {
         cout << "No register write back needed for this instruction" << endl;
+    }
+}
+
+void Simulator::detectHazards() {
+    // Skip hazard detection if data forwarding is enabled
+    if (enable_data_forwarding) {
+        stall_if = false;
+        stall_id = false;
+        return;
+    }
+    
+    // Extract source registers from IF/ID buffer instruction
+    if (!if_id.valid) {
+        stall_if = false;
+        stall_id = false;
+        return;
+    }
+    
+    uint32_t instruction = if_id.instruction;
+    uint32_t opcode = instruction & 0x7F;
+    uint32_t rs1 = (instruction >> 15) & 0x1F;
+    uint32_t rs2 = (instruction >> 20) & 0x1F;
+    
+    // Initialize stall signals to false
+    bool hazard_detected = false;
+    bool is_ex_mem_hazard = false;
+    
+    // Check for RAW hazards with instruction in ID/EX stage
+    if (id_ex.valid && id_ex.rd != 0) {
+        // For R-type, I-type, and load instructions that write to a register
+        if (id_ex.reg_write) {
+            // Special case: load-use hazard
+            if (id_ex.mem_read && (id_ex.rd == rs1 || id_ex.rd == rs2)) {
+                // Load followed by instruction that uses the loaded value
+                // This cannot be resolved by forwarding and requires a stall
+                hazard_detected = true;
+                data_hazards++;
+                stalls_data_hazards++;
+                cout << "Load-use hazard detected: stalling pipeline" << endl;
+            }
+            // RAW hazard with ALU instruction
+            else if (!id_ex.mem_read && (id_ex.rd == rs1 || id_ex.rd == rs2)) {
+                // This requires a stall without forwarding
+                hazard_detected = true;
+                data_hazards++;
+                stalls_data_hazards++;
+                cout << "RAW hazard detected: stalling pipeline" << endl;
+            }
+        }
+    }
+    
+    // Check for RAW hazards with instruction in EX/MEM stage
+    if (ex_mem.valid && ex_mem.rd != 0 && ex_mem.reg_write) {
+        if (ex_mem.rd == rs1 || ex_mem.rd == rs2) {
+            // This requires a stall without forwarding
+            hazard_detected = true;
+            is_ex_mem_hazard = true;
+            data_hazards++;
+            stalls_data_hazards++;
+            cout << "RAW hazard with EX/MEM stage detected: stalling pipeline" << endl;
+        }
+    }
+    
+    // Set stall signals if hazard is detected
+    if (hazard_detected) {
+        stall_if = true;
+        
+        // For EX/MEM hazards, release decode stall one cycle earlier
+        if (is_ex_mem_hazard) {
+            stall_id = false;  // Release decode stage one cycle earlier
+        } else {
+            stall_id = true;  // Keep decode stalled for ID/EX hazards
+        }
+        
+        flush_id_ex = true;
+        pipeline_stalls++;
+        
+        // Debug output
+        cout << "Pipeline stalled due to hazard. Current state:" << endl;
+        cout << "  IF/ID instruction: 0x" << hex << if_id.instruction << dec << endl;
+        cout << "  ID/EX rd: " << id_ex.rd << ", rs1: " << rs1 << ", rs2: " << rs2 << endl;
+    } else {
+        stall_if = false;
+        stall_id = false;
     }
 }
