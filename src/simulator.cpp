@@ -240,6 +240,204 @@ void Simulator::stageFetch() {
     }
 }
 
+void Simulator::stageDecode() {
+
+    
+    // Skip decode if stalled
+    if (stall_id) {
+        // Insert NOP in ID/EX buffer during stall
+        id_ex.valid = false;
+        id_ex.reg_write = false;
+        id_ex.mem_read = false;
+        id_ex.mem_write = false;
+        id_ex.branch = false;
+        id_ex.jump = false;
+        id_ex.alu_op = NONE;
+        id_ex.branch_cond = BranchCondition::INVALID;
+        return;
+    }
+
+    if (clock == 1) {
+        id_ex.valid = false;
+        return;
+    }
+
+    
+    // If flush is active, insert NOP in ID/EX buffer
+    if (flush_id_ex) {
+        id_ex.valid = false;
+        id_ex.reg_write = false;
+        id_ex.mem_read = false;
+        id_ex.mem_write = false;
+        id_ex.branch = false;
+        id_ex.jump = false;
+        id_ex.alu_op = NONE;
+        id_ex.branch_cond = BranchCondition::INVALID;
+        flush_id_ex = false;
+        return;
+    }
+    
+    // Skip if IF/ID buffer doesn't contain a valid instruction
+    if (!if_id.valid) {
+        id_ex.valid = false;
+        return;
+    }
+    
+    // Call the existing decode function
+    DecodedInstruction decodedInst = decode();
+
+    if (if_id.terminate){
+        id_ex.terminate = true;
+    }
+    
+    
+    // Map the decoded instruction to the ID/EX buffer
+    id_ex.pc = if_id.pc;
+    id_ex.rd = decodedInst.rd;
+    id_ex.rs1 = decodedInst.rs1;
+    id_ex.rs2 = decodedInst.rs2;
+    id_ex.valid = true;
+    
+    // Set control signals based on the opcode
+    uint32_t opcode = decodedInst.opcode;
+    uint32_t funct3 = decodedInst.funct3;
+    uint32_t funct7 = decodedInst.funct7;
+    
+    // Default control signals
+    id_ex.reg_write = false;
+    id_ex.mem_read = false;
+    id_ex.mem_write = false;
+    id_ex.branch = false;
+    id_ex.jump = false;
+    id_ex.alu_op = NONE;
+    id_ex.branch_cond = BranchCondition::INVALID;
+    id_ex.mem_width = 0;
+    id_ex.ALU_src = false;  // Default to using register
+    
+    // Set control signals based on opcode
+    switch (opcode) {
+        case 0x33: // R-type
+            id_ex.reg_write = true;
+            id_ex.ALU_src = false;
+            
+            // Map funct3 and funct7 to AluOperation
+            switch (funct3) {
+                case 0x0:  // ADD/SUB/MUL
+                    if (funct7 == 0x00) id_ex.alu_op = ADD;
+                    else if (funct7 == 0x20) id_ex.alu_op = SUB;
+                    else if (funct7 == 0x01) id_ex.alu_op = MUL;
+                    break;
+                case 0x1:  // SLL
+                    id_ex.alu_op = SLL;
+                    break;
+                case 0x2:  // SLT
+                    id_ex.alu_op = SLT;
+                    break;
+                case 0x4:  // XOR/DIV
+                    if (funct7 == 0x00) id_ex.alu_op = XOR;
+                    else if (funct7 == 0x01) id_ex.alu_op = DIV;
+                    break;
+                case 0x5:  // SRL/SRA
+                    if (funct7 == 0x00) id_ex.alu_op = SRL;
+                    else if (funct7 == 0x20) id_ex.alu_op = SRA;
+                    break;
+                case 0x6:  // OR/REM
+                    if (funct7 == 0x00) id_ex.alu_op = OR;
+                    else if (funct7 == 0x01) id_ex.alu_op = REM;
+                    break;
+                case 0x7:  // AND
+                    id_ex.alu_op = AND;
+                    break;
+            }
+            break;
+            
+        case 0x13: // I-type ALU
+            id_ex.reg_write = true;
+            id_ex.ALU_src = true;  // Use immediate
+            
+            switch (funct3) {
+                case 0x0:  // ADDI
+                    id_ex.alu_op = ADD;
+                    break;
+                case 0x7:  // ANDI
+                    id_ex.alu_op = AND;
+                    break;
+                case 0x6:  // ORI
+                    id_ex.alu_op = OR;
+                    break;
+            }
+            break;
+            
+        case 0x03: // Load instructions (I-type)
+            id_ex.reg_write = true;
+            id_ex.mem_read = true;
+            id_ex.ALU_src = true;  // Use immediate for address calculation
+            id_ex.alu_op = ADD;    // Address calculation
+            id_ex.mem_width = funct3;
+            break;
+            
+        case 0x23: // Store instructions (S-type)
+            id_ex.mem_write = true;
+            id_ex.ALU_src = true;  // Use immediate for address calculation
+            id_ex.alu_op = ADD;    // Address calculation
+            id_ex.mem_width = funct3;
+            break;
+            
+        case 0x63: // Branch instructions (SB-type)
+            id_ex.branch = true;
+            id_ex.ALU_src = false;
+            id_ex.alu_op = SUB;    // For comparison
+            
+            switch (funct3) {
+                case 0x0: id_ex.branch_cond = BranchCondition::BEQ; break;
+                case 0x1: id_ex.branch_cond = BranchCondition::BNE; break;
+                case 0x4: id_ex.branch_cond = BranchCondition::BLT; break;
+                case 0x5: id_ex.branch_cond = BranchCondition::BGE; break;
+                default: id_ex.branch_cond = BranchCondition::INVALID; break;
+            }
+            break;
+            
+        case 0x37: // LUI (U-type)
+            id_ex.reg_write = true;
+            id_ex.ALU_src = true;  // Use immediate
+            id_ex.alu_op = LUI;
+            break;
+            
+        case 0x17: // AUIPC (U-type)
+            id_ex.reg_write = true;
+            id_ex.ALU_src = true;  // Use immediate
+            id_ex.alu_op = AUIPC;
+            break;
+            
+        case 0x6F: // JAL (UJ-type)
+            id_ex.reg_write = true;
+            id_ex.jump = true;
+            id_ex.ALU_src = true;  // Use immediate for target calculation
+            id_ex.alu_op = ADD;    // PC + imm
+            id_ex.is_jal= true;
+            break;
+            
+        case 0x67: // JALR (I-type)
+            id_ex.reg_write = true;
+            id_ex.jump = true;
+            id_ex.ALU_src = true;  // Use immediate
+            id_ex.alu_op = ADD;    // rs1 + imm
+            id_ex.is_jal = false;
+            break;
+    }
+    
+    // Update statistics
+    if (id_ex.valid) {
+        if (id_ex.mem_read || id_ex.mem_write) {
+            data_transfer_instructions++;
+        } else if (id_ex.branch || id_ex.jump) {
+            control_instructions++;
+        } else {
+            alu_instructions++;
+        }
+    }
+}
+
 
 //function to fetch instruction
 void Simulator::fetch() {
