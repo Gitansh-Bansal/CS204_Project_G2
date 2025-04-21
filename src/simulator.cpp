@@ -1291,7 +1291,8 @@ void Simulator::detectHazards() {
     }
 }
 
-void Simulator::forwardData() {
+
+void Simulator::forwardData() {    
     stall_if = false;
     stall_id = false;
     flush_id_ex = false;
@@ -1302,7 +1303,7 @@ void Simulator::forwardData() {
     
     uint32_t rs1 = id_ex.rs1;
     uint32_t rs2 = id_ex.rs2;
-    
+        
     bool forward_a_from_ex_mem = false;
     bool forward_a_from_mem_wb = false;
     bool forward_b_from_ex_mem = false;
@@ -1310,53 +1311,67 @@ void Simulator::forwardData() {
     
     // check for forwarding from EX/MEM stage
     if (ex_mem.valid && ex_mem.reg_write && ex_mem.rd != 0) {
+        
         // forward from EX/MEM to rs1
         if (ex_mem.rd == rs1) {
             forward_a_from_ex_mem = true;
             data_hazards++;
+            cout << "Forwarding data from EX/MEM to RS1 (register " << rs1 << "), value: 0x" 
+                 << hex << ex_mem.alu_result << dec << endl;
         }
         
         // forward from EX/MEM to rs2
         if (ex_mem.rd == rs2) {
             forward_b_from_ex_mem = true;
             data_hazards++;
+            cout << "Forwarding data from EX/MEM to RS2 (register " << rs2 << "), value: 0x" 
+                 << hex << ex_mem.alu_result << dec << endl;
         }
     }
     
     // check for forwarding from MEM/WB stage
     if (mem_wb.valid && mem_wb.reg_write && mem_wb.rd != 0) {
+        
         // forward from MEM/WB to rs1 if not already forwarding from EX/MEM
         if (mem_wb.rd == rs1 && !forward_a_from_ex_mem) {
             forward_a_from_mem_wb = true;
             data_hazards++;
+            cout << "Forwarding data from MEM/WB to RS1 (register " << rs1 << "), value: 0x" 
+                 << hex << regState.getTemp("RY") << dec << endl;
         }
         
         // forward from MEM/WB to rs2 if not already forwarding from EX/MEM
         if (mem_wb.rd == rs2 && !forward_b_from_ex_mem) {
             forward_b_from_mem_wb = true;
             data_hazards++;
+            cout << "Forwarding data from MEM/WB to RS2 (register " << rs2 << "), value: 0x" 
+                 << hex << regState.getTemp("RY") << dec << endl;
         }
     }
     
     if (forward_a_from_ex_mem) {
         regState.setTemp("RA", ex_mem.alu_result);
+        cout << "Updated RA with EX/MEM result: 0x" << hex << ex_mem.alu_result << dec << endl;
     } else if (forward_a_from_mem_wb) {
         regState.setTemp("RA", regState.getTemp("RY"));
+        cout << "Updated RA with MEM/WB result: 0x" << hex << regState.getTemp("RY") << dec << endl;
     }
     
     if (forward_b_from_ex_mem) {
         regState.setTemp("RB", ex_mem.alu_result);
+        cout << "Updated RB with EX/MEM result: 0x" << hex << ex_mem.alu_result << dec << endl;
     } else if (forward_b_from_mem_wb) {
         regState.setTemp("RB", regState.getTemp("RY"));
+        cout << "Updated RB with MEM/WB result: 0x" << hex << regState.getTemp("RY") << dec << endl;
     }
     
     // check for load-use hazards
-    if (id_ex.valid && id_ex.mem_read && id_ex.rd != 0) {
+    if (id_ex.valid && id_ex.mem_read && id_ex.rd != 0) {        
         if (if_id.valid) {
             uint32_t instruction = if_id.instruction;
             uint32_t rs1_if = (instruction >> 15) & 0x1F;
             uint32_t rs2_if = (instruction >> 20) & 0x1F;
-            
+                        
             // check if the next instruction uses the result of the load
             if (id_ex.rd == rs1_if || id_ex.rd == rs2_if) {
                 stall_if = true;
@@ -1366,6 +1381,14 @@ void Simulator::forwardData() {
                 data_hazards++;
                 stalls_data_hazards++;
                 pipeline_stalls++;
+                
+                cout << "LOAD-USE HAZARD DETECTED! Stalling pipeline." << endl;
+                cout << "  - Load to register " << id_ex.rd << " followed by instruction using that register" << endl;
+                cout << "  - Setting stall_if=" << stall_if << ", stall_id=" << stall_id 
+                     << ", flush_id_ex=" << flush_id_ex << endl;
+                cout << "  - Total data hazards: " << data_hazards << ", stalls: " << stalls_data_hazards << endl;
+            } else {
+                cout << "No load-use hazard detected" << endl;
             }
         }
     }
