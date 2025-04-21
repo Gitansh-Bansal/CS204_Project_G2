@@ -1,6 +1,7 @@
 #include "simulator.h"
 #include <iostream>
 #include <iomanip>
+#include <fstream>
 
 // Constructor
 Simulator::Simulator() {
@@ -102,7 +103,7 @@ void Simulator::run() {
         } else {
             // For non-pipelined mode
             if (regState.getIR() == 0xffffffff) {
-                cout << "Simulation ended after " << clock -1 << " cycles." << endl;
+                cout << "Simulation ended after " << clock -6 << " cycles." << endl;
                 break;
             }
         }
@@ -797,14 +798,12 @@ void Simulator::stageMemory() {
     mem_wb.rd = ex_mem.rd;
     mem_wb.reg_write = ex_mem.reg_write;
     mem_wb.opcode = ex_mem.opcode;  // Propagate opcode
-    mem_wb.valid = true;
     mem_wb.pc = ex_mem.pc;
+    mem_wb.valid = true;
     
     // Default: pass ALU result to WB stage
     uint32_t result = regState.getTemp("RZ");
     
-    
-
     uint32_t address = regState.getTemp("RZ");
     
     // Handle memory operations
@@ -838,9 +837,7 @@ void Simulator::stageMemory() {
         // Update MDR with loaded value
         regState.setTemp("MDR", result);
         regState.setTemp("RY", result);
-        
-        // For statistics
-        data_transfer_instructions++;
+       
     } else if (ex_mem.mem_write) {
         uint32_t data = ex_mem.rs2_val;
         
@@ -861,36 +858,24 @@ void Simulator::stageMemory() {
                 cerr << "Error: Unknown store width: 0x" << hex << ex_mem.mem_width << dec << endl;
                 break;
         }
-        
-        // For statistics
-        data_transfer_instructions++;
-        
        
         mem_wb.reg_write = false;
     } else {
-        
         regState.setTemp("RY", result);
     }
 
     // For debugging/tracing
     if(trace_instruction && ex_mem.pc == trace_instruction_num) {
         cout << "Instruction Tracing (Knob5): Instruction PC 0x" << hex << trace_instruction_num << dec << endl;
-             cout << "\nMEM/WB Pipeline Register:" << endl;
-             if (mem_wb.valid) {
-                 cout << "  Result: 0x" << hex << setw(8) << setfill('0') << regState.getTemp("RY") << dec << endl;
-                 cout << "  RD: " << mem_wb.rd << endl;
-                 cout << "  RegWrite: " << (mem_wb.reg_write ? "True" : "False") << endl;
-                 cout << "  Terminate: " << (mem_wb.terminate ? "True" : "False") << endl;
-             }
-             cout << "  Valid: " << (mem_wb.valid ? "True" : "False") << endl;
-             }
-    
-    
-    if (ex_mem.branch_taken) {
-        // Branch was taken, update statistics
-        control_instructions++;
+        cout << "\nMEM/WB Pipeline Register:" << endl;
+        if (mem_wb.valid) {
+            cout << "  Result: 0x" << hex << setw(8) << setfill('0') << regState.getTemp("RY") << dec << endl;
+            cout << "  RD: " << mem_wb.rd << endl;
+            cout << "  RegWrite: " << (mem_wb.reg_write ? "True" : "False") << endl;
+            cout << "  Terminate: " << (mem_wb.terminate ? "True" : "False") << endl;
+        }
+        cout << "  Valid: " << (mem_wb.valid ? "True" : "False") << endl;
     }
-   
 }
 
 void Simulator::stageWriteBack() {
@@ -933,9 +918,6 @@ void Simulator::stageWriteBack() {
     
     if (mem_wb.reg_write && mem_wb.rd != 0) {
         regState.setGen(mem_wb.rd, regState.getTemp("RY"));
-        
-        // for statistics
-        instructions_executed++;
     }
 
     if (trace_instruction && mem_wb.pc == trace_instruction_num) {
@@ -987,18 +969,19 @@ Simulator::DecodedInstruction Simulator::decode() {
 
     // For non-pipelined mode, classify instruction here
     if (!enable_pipelining) {
-        instructions_executed++;
         
         switch(decodedInst.opcode) {
             case 0x03:  // Load instructions
             case 0x23:  // Store instructions
                 data_transfer_instructions++;
+                instructions_executed++;
                 break;
                 
             case 0x63:  // Branch instructions
             case 0x6F:  // JAL
             case 0x67:  // JALR
                 control_instructions++;
+                instructions_executed++;
                 break;
                 
             case 0x33:  // R-type ALU instructions
@@ -1006,6 +989,7 @@ Simulator::DecodedInstruction Simulator::decode() {
             case 0x37:  // LUI
             case 0x17:  // AUIPC
                 alu_instructions++;
+                instructions_executed++;
                 break;
                 
             default:
@@ -1421,6 +1405,7 @@ void Simulator::detectHazards() {
     
     // Initialize stall signals to false
     bool hazard_detected = false;
+    bool is_load_use_hazard = false;
     bool is_ex_mem_hazard = false;
     
     // Check for RAW hazards with instruction in ID/EX stage
@@ -1432,17 +1417,18 @@ void Simulator::detectHazards() {
                 // Load followed by instruction that uses the loaded value
                 // This cannot be resolved by forwarding and requires a stall
                 hazard_detected = true;
+                is_load_use_hazard = true;
                 data_hazards++;
-                stalls_data_hazards++;
-                cout << "Load-use hazard detected: stalling pipeline" << endl;
+                stalls_data_hazards += 2;  // Load-use hazard causes 2 stalls
+                cout << "Load-use hazard detected: stalling pipeline for 2 cycles" << endl;
             }
             // RAW hazard with ALU instruction
             else if (!id_ex.mem_read && (id_ex.rd == rs1 || id_ex.rd == rs2)) {
                 // This requires a stall without forwarding
                 hazard_detected = true;
                 data_hazards++;
-                stalls_data_hazards++;
-                cout << "RAW hazard detected: stalling pipeline" << endl;
+                stalls_data_hazards += 1;  // ALU-use hazard causes 1 stall
+                cout << "RAW hazard detected: stalling pipeline for 1 cycle" << endl;
             }
         }
     }
@@ -1454,8 +1440,8 @@ void Simulator::detectHazards() {
             hazard_detected = true;
             is_ex_mem_hazard = true;
             data_hazards++;
-            stalls_data_hazards++;
-            cout << "RAW hazard with EX/MEM stage detected: stalling pipeline" << endl;
+            stalls_data_hazards += 1;  // EX/MEM hazard causes 1 stall
+            cout << "RAW hazard with EX/MEM stage detected: stalling pipeline for 1 cycle" << endl;
         }
     }
     
@@ -1506,12 +1492,14 @@ void Simulator::forwardData() {
         if (ex_mem.rd == rs1) {
             forward_a_from_ex_mem = true;
             data_hazards++;
+            cout << "Data hazard detected: forwarding from EX/MEM to RS1" << endl;
         }
         
         // forward from EX/MEM to rs2
         if (ex_mem.rd == rs2) {
             forward_b_from_ex_mem = true;
             data_hazards++;
+            cout << "Data hazard detected: forwarding from EX/MEM to RS2" << endl;
         }
     }
     
@@ -1521,12 +1509,14 @@ void Simulator::forwardData() {
         if (mem_wb.rd == rs1 && !forward_a_from_ex_mem) {
             forward_a_from_mem_wb = true;
             data_hazards++;
+            cout << "Data hazard detected: forwarding from MEM/WB to RS1" << endl;
         }
         
         // forward from MEM/WB to rs2 if not already forwarding from EX/MEM
         if (mem_wb.rd == rs2 && !forward_b_from_ex_mem) {
             forward_b_from_mem_wb = true;
             data_hazards++;
+            cout << "Data hazard detected: forwarding from MEM/WB to RS2" << endl;
         }
     }
     
@@ -1542,7 +1532,7 @@ void Simulator::forwardData() {
         regState.setTemp("RB", regState.getTemp("RY"));
     }
     
-    // check for load-use hazards
+    // check for load-use hazards (these always need stalls even with forwarding)
     if (id_ex.valid && id_ex.mem_read && id_ex.rd != 0) {
         if (if_id.valid) {
             uint32_t instruction = if_id.instruction;
@@ -1558,6 +1548,7 @@ void Simulator::forwardData() {
                 data_hazards++;
                 stalls_data_hazards++;
                 pipeline_stalls++;
+                cout << "Load-use hazard detected: must stall even with forwarding" << endl;
             }
         }
     }
@@ -1740,4 +1731,63 @@ void Simulator::setKnob5(int target_instr) {
 void Simulator::setKnob6(bool enabled) {
     print_branch_prediction = enabled;
 
+}
+
+void Simulator::printStatistics(bool writeToFile) const {
+    cout << "\n============== Simulation Statistics ==============" << endl;
+    if (enable_pipelining) {
+        cout << "Stat1: Total cycles: " << clock - 1 << endl;
+        cout << "Stat2: Total instructions executed: " << instructions_executed << endl;
+        cout << "Stat3: CPI: " << fixed << setprecision(2) 
+             << static_cast<double>(clock - 1) / instructions_executed << endl;
+    }
+    else{
+        cout << "Stat1: Total cycles: " << clock - 6 << endl;
+        cout << "Stat2: Total instructions executed: " << instructions_executed << endl;
+        cout << "Stat3: CPI: " << fixed << setprecision(2) 
+             << static_cast<double>(clock - 6) / instructions_executed << endl;
+    }
+    cout << "Stat4: Number of Data-transfer instructions: " << data_transfer_instructions << endl;
+    cout << "Stat5: Number of ALU instructions: " << alu_instructions << endl;
+    cout << "Stat6: Number of Control instructions: " << control_instructions << endl;
+    cout << "Stat7: Number of stalls/bubbles: " << stalls_data_hazards + stalls_control_hazards << endl;
+    cout << "Stat8: Number of data hazards: " << data_hazards << endl;
+    cout << "Stat9: Number of control hazards: " << control_hazards << endl;
+    cout << "Stat10: Number of branch mispredictions: " << branch_mispredictions << endl;
+    cout << "Stat11: Number of stalls due to data hazards: " << stalls_data_hazards << endl;
+    cout << "Stat12: Number of stalls due to control hazards: " << stalls_control_hazards << endl;
+    cout << "================================================" << endl;
+
+    if (writeToFile) {
+        ofstream file("statistics.txt");
+        if (file.is_open()) {
+            file << "\n============== Simulation Statistics ==============" << endl;
+            if (enable_pipelining) {
+                file << "Stat1: Total cycles: " << clock - 1 << endl;
+                file << "Stat2: Total instructions executed: " << instructions_executed << endl;
+                file << "Stat3: CPI: " << fixed << setprecision(2) 
+                 << static_cast<double>(clock - 1) / instructions_executed << endl;
+            }
+            else{
+                file << "Stat1: Total cycles: " << clock - 6 << endl;
+                file << "Stat2: Total instructions executed: " << instructions_executed << endl;
+                file << "Stat3: CPI: " << fixed << setprecision(2) 
+                 << static_cast<double>(clock - 6) / instructions_executed << endl;
+            }
+            file << "Stat4: Number of Data-transfer instructions: " << data_transfer_instructions << endl;
+            file << "Stat5: Number of ALU instructions: " << alu_instructions << endl;
+            file << "Stat6: Number of Control instructions: " << control_instructions << endl;
+            file << "Stat7: Number of stalls/bubbles: " << stalls_data_hazards + stalls_control_hazards << endl;
+            file << "Stat8: Number of data hazards: " << data_hazards << endl;
+            file << "Stat9: Number of control hazards: " << control_hazards << endl;
+            file << "Stat10: Number of branch mispredictions: " << branch_mispredictions << endl;
+            file << "Stat11: Number of stalls due to data hazards: " << stalls_data_hazards << endl;
+            file << "Stat12: Number of stalls due to control hazards: " << stalls_control_hazards << endl;
+            file << "================================================" << endl;
+            file.close();
+        } else {
+            cerr << "Error: Unable to open statistics file." << endl;
+        }
+    }
+                
 }
