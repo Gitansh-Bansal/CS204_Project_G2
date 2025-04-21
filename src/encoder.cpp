@@ -87,73 +87,41 @@ int32_t parseRegister(const string& reg, const int& linenum) {
 }
 
 //function to parse immediate to integer
-int32_t parseImmediate(const string& imm, const int& linenum, bool& running) {
+int32_t parseImmediate(const string& imm, const int& linenum) {
 
     //check if immediate is in hex , binary or decimal
     try {
-        size_t pos;
-        int result;
         if (imm.size() > 2 && imm.substr(0, 2) == "0x") {
-            result =  stoi(imm.substr(2), &pos, 16);
-            if (pos != imm.substr(2).size()) {
-                throw runtime_error("Invalid immediate value found!!");
-            }
-            return result;
+            return stoi(imm.substr(2), nullptr, 16);
         } 
-        else if (imm.size() > 2 && imm.substr(0, 2) == "0b") {
-            result =  stoi(imm.substr(2), &pos, 2);
-            if (pos != imm.substr(2).size()) {
-                throw runtime_error("Invalid immediate value found!!");
-            }      
-            return result;
+        if (imm.size() > 2 && imm.substr(0, 2) == "0b") {
+            return stoi(imm.substr(2), nullptr, 2);
         }
-        else {
-            result =  stoi(imm, &pos);
-            if (pos != imm.size()) {
-                throw runtime_error("Invalid immediate value found!!");
-            }      
-            return result;
-        }
+        return stoi(imm);
     }
     //catch exception if immediate is invalid
     catch (const exception&) {
         cerr << "Error: Invalid immediate value "<<imm<<" at line " << linenum << endl;
-        running = false;
         return 0;
     }
 }
 
 //function to parse immediate to 64 bit integer for double word
-int64_t Immediate_64(const string& imm, const int& linenum, bool& running) {
+int64_t Immediate_64(const string& imm, const int& linenum) {
 
     //check if immediate is in hex , binary or decimal
     try {
-        size_t pos;
-        long long result;
         if (imm.size() > 2 && imm.substr(0, 2) == "0x") {
-            result = stoll(imm.substr(2), &pos, 16);
-            if (pos != imm.substr(2).size()) {
-                throw runtime_error("Invalid immediate value found!!");
-            }      
-            return result;
+            return stoll(imm.substr(2), nullptr, 16);
         } 
         if (imm.size() > 2 && imm.substr(0, 2) == "0b") {
-            result = stoll(imm.substr(2), &pos, 2);
-            if (pos != imm.substr(2).size()) {
-                throw runtime_error("Invalid immediate value found!!");
-            }      
-            return result;
+            return stoll(imm.substr(2), nullptr, 2);
         }
-        result = stoll(imm, &pos);
-        if (pos != imm.size()) {
-            throw runtime_error("Invalid immediate value found!!");
-        }      
-        return result;
+        return stoll(imm);
     }
     //catch exception if immediate is invalid
     catch (const exception&) {
         cerr << "Error: Invalid immediate value "<<imm<<" at line " << linenum << endl;
-        running = false;
         return 0;
     }
 }
@@ -168,6 +136,7 @@ string intToHex(uint32_t value) {
 
 //function to encode R type instructiosn
 uint32_t encodeR(const Instruction& instr) {
+
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     uint32_t funct7 = funct7Map.at(instr.opcode);
@@ -185,6 +154,7 @@ uint32_t encodeR(const Instruction& instr) {
     
     //check if operands are valid
     if (rd < 0 || rs1 < 0 || rs2 < 0) {
+        cerr << "Error: Invalid register in R-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
     
@@ -194,7 +164,6 @@ uint32_t encodeR(const Instruction& instr) {
 
 //function to encode I type instructions
 uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& symbolTable) {
-    bool running = true;
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     int32_t rd, rs1, imm;
@@ -210,14 +179,14 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
         rd = parseRegister(instr.operands[0],instr.lineNumber);
         if (parseRegister(instr.operands[1],instr.lineNumber)!= -1) {
             rs1 = parseRegister(instr.operands[1],instr.lineNumber);
-            imm = parseImmediate(instr.operands[2],instr.lineNumber,running);
-
+            imm = parseImmediate(instr.operands[2],instr.lineNumber);
         }
         else if (parseRegister(instr.operands[2],instr.lineNumber)!= -1) {
             rs1 = parseRegister(instr.operands[2],instr.lineNumber);
-            imm = parseImmediate(instr.operands[1],instr.lineNumber,running);
+            imm = parseImmediate(instr.operands[1],instr.lineNumber);
         }
         else {
+            cerr << "Error: Invalid I-type instruction format at line " << instr.lineNumber << endl;
             return 0;
         }
     } 
@@ -225,7 +194,7 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
     // load instructions (lb, lh, lw, ld)
     else if (instr.opcode == "lb" || instr.opcode == "lh" || instr.opcode == "lw" || instr.opcode == "ld") {
         rd = parseRegister(instr.operands[0],instr.lineNumber);
-        imm = parseImmediate(instr.operands[1],instr.lineNumber,running);
+        imm = parseImmediate(instr.operands[1],instr.lineNumber);
         rs1 = parseRegister(instr.operands[2],instr.lineNumber);
     } 
 
@@ -237,12 +206,8 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
         if (symbolTable.hasSymbol(instr.operands[2])) {
             imm = symbolTable.getSymbolAddress(instr.operands[2]);
         } else {
-            imm = parseImmediate(instr.operands[2],instr.lineNumber,running);
+            imm = parseImmediate(instr.operands[2],instr.lineNumber);
         }
-    }
-
-    if (!running) {
-        return 0;
     }
     
     //check if immediate is in range
@@ -253,6 +218,7 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
 
     //check if registers are valid
     if (rd < 0 || rs1 < 0) {
+        cerr << "Error: Invalid register in I-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
     
@@ -264,7 +230,6 @@ uint32_t encodeI(const Instruction& instr, uint32_t address, const SymbolTable& 
 
 //function to encode S type instructions
 uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& symbolTable){
-    bool running = true;
     uint32_t opcode = opcodeMap.at(instr.opcode);
     uint32_t funct3 = funct3Map.at(instr.opcode);
     int32_t rs1, rs2, imm;
@@ -277,16 +242,15 @@ uint32_t encodeS(const Instruction& instr, uint32_t addr, const SymbolTable& sym
 
     //parse operands to integer
     rs2 = parseRegister(instr.operands[0],instr.lineNumber);
-    imm = parseImmediate(instr.operands[1],instr.lineNumber,running);
+    imm = parseImmediate(instr.operands[1],instr.lineNumber);
     rs1 = parseRegister(instr.operands[2],instr.lineNumber);
     
     //check if operands are valid
     if (rs1 < 0 || rs2 < 0) {
+        cerr << "Error: Invalid register in S-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
-    if (!running) {
-        return 0;
-    }
+
     //check if immediate is in range
     if (imm < -2048 || imm > 2047) {
         cerr << "Error: Immediate value out of range [-2048, 2047] at line " << instr.lineNumber << endl;
@@ -328,6 +292,7 @@ uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& sy
     
     //check if registers are valid
     if (rs1 < 0 || rs2 < 0) {
+        cerr << "Error: Invalid register in SB-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
     
@@ -347,7 +312,6 @@ uint32_t encodeSB(const Instruction& instr, uint32_t addr, const SymbolTable& sy
 
 //function to encode U type instructions
 uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& symbolTable) {
-    bool running = true;
     uint32_t opcode = opcodeMap.at(instr.opcode);
 
     //check if operands are less than 2
@@ -360,6 +324,7 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
 
     //check if register is valid
     if (rd < 0) {
+        cerr << "Error: Invalid register in U-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
 
@@ -368,11 +333,9 @@ uint32_t encodeU(const Instruction& instr, uint32_t address, const SymbolTable& 
     if (symbolTable.hasSymbol(instr.operands[1])) {
         imm = symbolTable.getSymbolAddress(instr.operands[1]);
     } else {
-        imm = parseImmediate(instr.operands[1],instr.lineNumber,running);
+        imm = parseImmediate(instr.operands[1],instr.lineNumber);
     }
-    if (!running) {
-        return 0;
-    }
+
     //check if immediate is in range
     if (imm < -1048576 || imm > 1048574) { 
         cerr << "Error: Immediate value out of range [-1048576, 1048574] at line " << instr.lineNumber << endl;
@@ -410,6 +373,7 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
     
     //check if register is valid
     if (rd < 0) {
+        cerr << "Error: Invalid register in UJ-type instruction at line " << instr.lineNumber << endl;
         return 0;
     }
 
@@ -430,7 +394,7 @@ uint32_t encodeUJ(const Instruction& instr, uint32_t addr, const SymbolTable& sy
 
 //function to encode directives
 vector<uint8_t> encodeDirective(const Instruction& instr) {
-    bool running = true;
+
     //vector to store data
     vector<uint8_t> data;
 
@@ -438,10 +402,7 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     if (instr.opcode == ".byte") {
         //parsing each operand to integer
         for (const auto& operand : instr.operands) {
-            int32_t value = parseImmediate(operand, instr.lineNumber,running);
-            if (!running) {
-                return vector<uint8_t>();
-            }
+            int32_t value = parseImmediate(operand, instr.lineNumber);
             if (value > numeric_limits<int8_t>::max() || value < numeric_limits<int8_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in byte at line " << instr.lineNumber<< endl;
             
             data.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -452,10 +413,7 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     else if (instr.opcode == ".half") {
         //parsing each operand to integer
         for (const auto& operand : instr.operands) {
-            int32_t value = parseImmediate(operand, instr.lineNumber,running); 
-            if (!running) {
-                return vector<uint8_t>();
-            }
+            int32_t value = parseImmediate(operand, instr.lineNumber); 
             if (value > numeric_limits<int16_t>::max() || value < numeric_limits<int16_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in half word at line " << instr.lineNumber<< endl;
 
             //pushing each byte to data vector
@@ -468,10 +426,7 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     else if (instr.opcode == ".word") {
         //parsing each operand to integer
         for (const auto& operand : instr.operands) {
-            int32_t value = parseImmediate(operand, instr.lineNumber,running);
-            if (!running) {
-                return vector<uint8_t>();
-            }
+            int32_t value = parseImmediate(operand, instr.lineNumber);
             if (value > numeric_limits<int32_t>::max() || value < numeric_limits<int32_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in word at line " << instr.lineNumber<< endl;
             //pushing each byte to data vector
             data.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -485,10 +440,7 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
     else if (instr.opcode == ".dword") {
         //parsing each operand to integer
         for (const auto& operand : instr.operands) {
-            int64_t value = Immediate_64(operand, instr.lineNumber,running);
-            if (!running) {
-                return vector<uint8_t>();
-            }
+            int64_t value = Immediate_64(operand, instr.lineNumber);
             if (value > numeric_limits<int64_t>::max() || value < numeric_limits<int64_t>::min()) cerr << "Error: Too big entry "<< value << " to fit in double word at line " << instr.lineNumber<< endl;
             //pushing each byte to data vector
             for (int i = 0; i < 8; i++) {
@@ -499,19 +451,13 @@ vector<uint8_t> encodeDirective(const Instruction& instr) {
 
     //opcode is .asciiz
     else if (instr.opcode == ".asciiz") {
-        if (instr.operands.size() != 1) {
-            cerr << "Error: Invalid .asciiz directive format at line " << instr.lineNumber << endl;
-            return vector<uint8_t>();
-        }
+
         //extracting string from operand
         string str = instr.operands[0];
         if (str.size() >= 2 && str.front() == '"' && str.back() == '"') {
             str = str.substr(1, str.size() - 2);
         }
-        else {
-            cerr << "Error: Invalid string format at line " << instr.lineNumber << endl;
-            return vector<uint8_t>();
-        }
+        
         //pushing each byte to data vector
         for (char c : str) {
             data.push_back(static_cast<uint8_t>(c));
