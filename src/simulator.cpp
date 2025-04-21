@@ -1287,3 +1287,83 @@ void Simulator::detectHazards() {
         stall_id = false;
     }
 }
+
+void Simulator::forwardData() {
+    stall_if = false;
+    stall_id = false;
+    flush_id_ex = false;
+
+    if (!id_ex.valid) {
+        return;
+    }
+    
+    uint32_t rs1 = id_ex.rs1;
+    uint32_t rs2 = id_ex.rs2;
+    
+    bool forward_a_from_ex_mem = false;
+    bool forward_a_from_mem_wb = false;
+    bool forward_b_from_ex_mem = false;
+    bool forward_b_from_mem_wb = false;
+    
+    // check for forwarding from EX/MEM stage
+    if (ex_mem.valid && ex_mem.reg_write && ex_mem.rd != 0) {
+        // forward from EX/MEM to rs1
+        if (ex_mem.rd == rs1) {
+            forward_a_from_ex_mem = true;
+            data_hazards++;
+        }
+        
+        // forward from EX/MEM to rs2
+        if (ex_mem.rd == rs2) {
+            forward_b_from_ex_mem = true;
+            data_hazards++;
+        }
+    }
+    
+    // check for forwarding from MEM/WB stage
+    if (mem_wb.valid && mem_wb.reg_write && mem_wb.rd != 0) {
+        // forward from MEM/WB to rs1 if not already forwarding from EX/MEM
+        if (mem_wb.rd == rs1 && !forward_a_from_ex_mem) {
+            forward_a_from_mem_wb = true;
+            data_hazards++;
+        }
+        
+        // forward from MEM/WB to rs2 if not already forwarding from EX/MEM
+        if (mem_wb.rd == rs2 && !forward_b_from_ex_mem) {
+            forward_b_from_mem_wb = true;
+            data_hazards++;
+        }
+    }
+    
+    if (forward_a_from_ex_mem) {
+        regState.setTemp("RA", ex_mem.alu_result);
+    } else if (forward_a_from_mem_wb) {
+        regState.setTemp("RA", regState.getTemp("RY"));
+    }
+    
+    if (forward_b_from_ex_mem) {
+        regState.setTemp("RB", ex_mem.alu_result);
+    } else if (forward_b_from_mem_wb) {
+        regState.setTemp("RB", regState.getTemp("RY"));
+    }
+    
+    // check for load-use hazards
+    if (id_ex.valid && id_ex.mem_read && id_ex.rd != 0) {
+        if (if_id.valid) {
+            uint32_t instruction = if_id.instruction;
+            uint32_t rs1_if = (instruction >> 15) & 0x1F;
+            uint32_t rs2_if = (instruction >> 20) & 0x1F;
+            
+            // check if the next instruction uses the result of the load
+            if (id_ex.rd == rs1_if || id_ex.rd == rs2_if) {
+                stall_if = true;
+                stall_id = true;
+                flush_id_ex = true;
+                
+                data_hazards++;
+                stalls_data_hazards++;
+                pipeline_stalls++;
+            }
+        }
+    }
+}
