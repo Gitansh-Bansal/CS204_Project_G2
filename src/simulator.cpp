@@ -182,6 +182,7 @@ void Simulator::stageFetch() {
     if (stall_if) {
         return;
     }
+
     
     uint32_t current_pc = regState.getPC();
     uint32_t instruction = memory.readWord(current_pc);
@@ -232,9 +233,18 @@ void Simulator::stageFetch() {
             regState.setPC(current_pc + 4);
         }
         
-        if (trace_instruction && instructions_executed == trace_instruction_num) {
-            cout << "Cycle " << clock << ": Instruction " << trace_instruction_num 
-                 << " fetched: 0x" << hex << instruction << dec << endl;
+        if (trace_instruction && if_id.pc == trace_instruction_num) {
+            cout << "Cycle " << clock << ": Instruction  PC " << trace_instruction_num 
+                 <<  dec << endl;
+            //Print IF/ID buffer contents
+            cout << "IF/ID Pipeline Register:" << endl;
+            if (if_id.valid) {
+            cout << "  PC: 0x" << hex << setw(8) << setfill('0') << if_id.pc << dec << endl;
+            cout << "  Instruction: 0x" << hex << setw(8) << setfill('0') << if_id.instruction << dec << endl;
+        }
+            cout << "  Valid: " << (if_id.valid ? "True" : "False") << endl;
+    
+
         }
     } else {
         // During flush, invalidate everything in IF/ID
@@ -246,6 +256,8 @@ void Simulator::stageFetch() {
         // For statistics
         control_hazards++;
     }
+
+    
 }
 
 void Simulator::stageDecode() {
@@ -433,6 +445,64 @@ void Simulator::stageDecode() {
             id_ex.is_jal = false;
             break;
     }
+
+    //knob 5
+    if(trace_instruction && id_ex.pc == trace_instruction_num) {
+        cout << "Cycle " << clock << ": Instruction  PC " << trace_instruction_num << dec << endl;
+        //Print ID/EX buffer contents
+        cout << "\nID/EX Pipeline Register:" << endl;
+        if (id_ex.valid ) {    
+        cout << "  PC: 0x" << hex << setw(8) << setfill('0') << id_ex.pc << dec << endl;
+        cout << "  RS1 (reg num): " << id_ex.rs1 << endl;
+        cout << "  RS2 (reg num): " << id_ex.rs2 << endl;
+        cout << "  RD: " << id_ex.rd << endl;
+        cout << "  RegWrite: " << (id_ex.reg_write ? "True" : "False") << endl;
+        cout << "  MemRead: " << (id_ex.mem_read ? "True" : "False") << endl;
+        cout << "  MemWrite: " << (id_ex.mem_write ? "True" : "False") << endl;
+        cout << "  Branch: " << (id_ex.branch ? "True" : "False") << endl;
+        cout << "  Jump: " << (id_ex.jump ? "True" : "False") << endl;
+        
+        // Print ALU operation
+        cout << "  ALU Operation: ";
+        switch (id_ex.alu_op) {
+            case ADD: cout << "ADD"; break;
+            case SUB: cout << "SUB"; break;
+            case MUL: cout << "MUL"; break;
+            case SLL: cout << "SLL"; break;
+            case SLT: cout << "SLT"; break;
+            case XOR: cout << "XOR"; break;
+            case DIV: cout << "DIV"; break;
+            case SRL: cout << "SRL"; break;
+            case SRA: cout << "SRA"; break;
+            case OR: cout << "OR"; break;
+            case REM: cout << "REM"; break;
+            case AND: cout << "AND"; break;
+            case LUI: cout << "LUI"; break;
+            case AUIPC: cout << "AUIPC"; break;
+            case NONE: cout << "NONE"; break;
+            default: cout << "UNKNOWN"; break;
+        }
+        cout << endl;
+        
+        // Print branch condition
+        cout << "  Branch Condition: ";
+        switch (id_ex.branch_cond) {
+            case BranchCondition::BEQ: cout << "BEQ"; break;
+            case BranchCondition::BNE: cout << "BNE"; break;
+            case BranchCondition::BLT: cout << "BLT"; break;
+            case BranchCondition::BGE: cout << "BGE"; break;
+            case BranchCondition::INVALID: cout << "INVALID"; break;
+            default: cout << "UNKNOWN"; break;
+        }
+        cout << endl;
+        
+        cout << "  Memory Width: " << static_cast<int>(id_ex.mem_width) << endl;
+        cout << "  Terminate: " << (id_ex.terminate ? "True" : "False") << endl;
+        }
+        cout << "  Valid: " << (id_ex.valid ? "True" : "False") << endl;
+
+    }
+
     
     // Update statistics
     if (id_ex.valid) {
@@ -468,9 +538,24 @@ void Simulator::stageExecute() {
     ex_mem.branch_taken = false;
     
     // For debugging/tracing
-    if (trace_instruction && instructions_executed == trace_instruction_num) {
-        cout << "Cycle " << clock << ": Instruction " << trace_instruction_num 
-             << " in execute stage" << endl;
+    if(trace_instruction && id_ex.pc == trace_instruction_num) {
+        cout << "Cycle " << clock << ": Instruction  PC " << trace_instruction_num 
+             << dec << endl;
+        //Print ID/EX buffer contents
+        cout << "\nEX/MEM Pipeline Register:" << endl;
+        if (ex_mem.valid) {
+            cout << "  PC: 0x" << hex << setw(8) << setfill('0') << ex_mem.pc << dec << endl;
+            cout << "  ALU Result: 0x" << hex << setw(8) << setfill('0') << ex_mem.alu_result << dec << endl;
+            cout << "  RD: " << ex_mem.rd << endl;
+            cout << "  RegWrite: " << (ex_mem.reg_write ? "True" : "False") << endl;
+            cout << "  MemRead: " << (ex_mem.mem_read ? "True" : "False") << endl;
+            cout << "  MemWrite: " << (ex_mem.mem_write ? "True" : "False") << endl;
+            cout << "  Memory Width: " << static_cast<int>(ex_mem.mem_width) << endl;
+            cout << "  Branch Taken: " << (ex_mem.branch_taken ? "True" : "False") << endl;
+            cout << "  Terminate: " << (ex_mem.terminate ? "True" : "False") << endl;
+        }
+        cout << "  Valid: " << (ex_mem.valid ? "True" : "False") << endl;
+    
     }
 
     // Get operand values
@@ -685,15 +770,24 @@ void Simulator::stageMemory() {
     mem_wb.rd = ex_mem.rd;
     mem_wb.reg_write = ex_mem.reg_write;
     mem_wb.valid = true;
+    mem_wb.pc = ex_mem.pc;
     
     // Default: pass ALU result to WB stage
     uint32_t result = regState.getTemp("RZ");
     
     // For debugging/tracing
-    if (trace_instruction && instructions_executed == trace_instruction_num) {
-        cout << "Cycle " << clock << ": Instruction " << trace_instruction_num 
-             << " in memory stage" << endl;
-    }
+    if(trace_instruction && ex_mem.pc == trace_instruction_num) {
+        cout << "Cycle " << clock << ": Instruction  PC " << trace_instruction_num 
+             << " in memory stage:"<< dec << endl;
+             cout << "\nMEM/WB Pipeline Register:" << endl;
+             if (mem_wb.valid) {
+                 cout << "  Result: 0x" << hex << setw(8) << setfill('0') << regState.getTemp("RY") << dec << endl;
+                 cout << "  RD: " << mem_wb.rd << endl;
+                 cout << "  RegWrite: " << (mem_wb.reg_write ? "True" : "False") << endl;
+                 cout << "  Terminate: " << (mem_wb.terminate ? "True" : "False") << endl;
+             }
+             cout << "  Valid: " << (mem_wb.valid ? "True" : "False") << endl;
+             }
 
     uint32_t address = regState.getTemp("RZ");
     
@@ -762,10 +856,14 @@ void Simulator::stageWriteBack() {
         return;
     }
     
-    if (trace_instruction && instructions_executed == trace_instruction_num) {
-        cout << "Cycle " << clock << ": Instruction " << trace_instruction_num 
-             << " in write back stage" << endl;
+    if (trace_instruction && mem_wb.pc == trace_instruction_num) {
+        cout << "Cycle " << clock << " in write back stage" << endl;
+        //print register file
+        cout << "\nRegisters after write back:" << endl;
+        printRegisters();
     }
+
+
     
     if (mem_wb.reg_write && mem_wb.rd != 0) {
         regState.setGen(mem_wb.rd, regState.getTemp("RY"));
@@ -1399,7 +1497,7 @@ void Simulator::printPipelineRegisters() const {
     
     // Print ID/EX Buffer contents
     cout << "\nID/EX Pipeline Register:" << endl;
-    if (id_ex.valid) {    
+    if (id_ex.valid ) {    
         cout << "  PC: 0x" << hex << setw(8) << setfill('0') << id_ex.pc << dec << endl;
         cout << "  RS1 (reg num): " << id_ex.rs1 << endl;
         cout << "  RS2 (reg num): " << id_ex.rs2 << endl;
