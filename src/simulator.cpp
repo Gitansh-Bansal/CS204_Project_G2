@@ -195,6 +195,11 @@ void Simulator::stageFetch() {
         regState.setIR(instruction);
         return;
     }
+
+    uint32_t prevInstruction = regState.getIR();
+    if (instruction != prevInstruction) {
+        instructions_executed++;
+    }
     
     regState.setIR(instruction);
     
@@ -776,9 +781,6 @@ void Simulator::stageWriteBack() {
     
     if (mem_wb.reg_write && mem_wb.rd != 0) {
         regState.setGen(mem_wb.rd, regState.getTemp("RY"));
-        
-        // for statistics
-        instructions_executed++;
     }
     
     // check for data forwarding to resolve data hazards
