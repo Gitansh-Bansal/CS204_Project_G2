@@ -96,49 +96,52 @@ void Simulator::step() {
     }
 
     if (enable_pipelining) {
-        // Execute pipeline stages in reverse order
+
         if (!enable_data_forwarding) detectHazards();
 
-        cout<<endl<<"stageWriteBack"<<endl;
+        cout<<"\nWriteBack Stage:"<<endl;
         stageWriteBack();
-        cout<<endl<<"stageMemory"<<endl;
+        cout<<"\nMemory Access Stage:"<<endl;
         stageMemory();
-        cout<<endl<<"stageExecute"<<endl;
+        cout<<"\nExecute Stage:"<<endl;
         stageExecute();
-        cout<<endl<<"stageDecode"<<endl;
+        cout<<"\nInstruction Decode Stage:"<<endl;
         stageDecode();
-        cout<<endl<<"stageFetch"<<endl;
+        cout<<"\nInstruction Fetch Stage:"<<endl;
         if (!if_id.terminate) stageFetch();
         
-        // Detect hazards for next cycle
         if (enable_data_forwarding) forwardData();
 
-        // Update statistics
         clock++;
         
-        // Print debug information if enabled
         if (print_registers_each_cycle) {
-            cout<<"\n---------- Registers ----------\n";
+            cout<<"\n-------------------- Registers --------------------\n";
             printRegisters();
+            cout<<"---------------------------------------------------\n";
         }
         
         if (print_pipeline_registers) printPipelineRegisters();
 
-        if(print_branch_prediction) branch_predictor.print_state();
+        if (print_branch_prediction) branch_predictor.print_state();
 
     } else {
-        // Non-pipelined implementation
+        cout<<"\nFetch Stage:"<<endl;
         fetch();
+        cout<<"\nDecode Stage:"<<endl;
         DecodedInstruction decodedInst = decode();
+        cout<<"\nExecute Stage:"<<endl;
         execute(decodedInst);
+        cout<<"\nMemory Access Stage:"<<endl;
         memoryAccess(decodedInst);
+        cout<<"\nWriteBack Stage:"<<endl;
         writeBack(decodedInst);
+        
         clock+=5;
 
-        // Print debug information if enabled
         if (print_registers_each_cycle) {
-            cout<<"\n---------- Registers ----------\n";
+            cout<<"\n-------------------- Registers --------------------\n";
             printRegisters();
+            cout<<"---------------------------------------------------\n";
         }
     }
 }
