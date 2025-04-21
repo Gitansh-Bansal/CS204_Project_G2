@@ -196,11 +196,6 @@ void Simulator::stageFetch() {
         regState.setIR(instruction);
         return;
     }
-
-    uint32_t prevInstruction = regState.getIR();
-    if (instruction != prevInstruction) {
-        instructions_executed++;
-    }
     
     regState.setIR(instruction);
     
@@ -234,8 +229,8 @@ void Simulator::stageFetch() {
         }
         
         if (trace_instruction && if_id.pc == trace_instruction_num) {
-            cout << "Cycle " << clock << ": Instruction  PC " << trace_instruction_num 
-                 <<  dec << endl;
+        
+            cout<<"Instruction Tracing (Knob5): Instruction PC 0x"<<hex<<trace_instruction_num<<dec<<endl;
             //Print IF/ID buffer contents
             cout << "IF/ID Pipeline Register:" << endl;
             if (if_id.valid) {
@@ -448,8 +443,9 @@ void Simulator::stageDecode() {
 
     //knob 5
     if(trace_instruction && id_ex.pc == trace_instruction_num) {
-        cout << "Cycle " << clock << ": Instruction  PC " << trace_instruction_num << dec << endl;
-        //Print ID/EX buffer contents
+
+        cout << "Instruction Tracing (Knob5): Instruction PC 0x" << hex << trace_instruction_num << dec << endl;
+
         cout << "\nID/EX Pipeline Register:" << endl;
         if (id_ex.valid ) {    
         cout << "  PC: 0x" << hex << setw(8) << setfill('0') << id_ex.pc << dec << endl;
@@ -537,27 +533,7 @@ void Simulator::stageExecute() {
     ex_mem.valid = true;
     ex_mem.branch_taken = false;
     
-    // For debugging/tracing
-    if(trace_instruction && id_ex.pc == trace_instruction_num) {
-        cout << "Cycle " << clock << ": Instruction  PC " << trace_instruction_num 
-             << dec << endl;
-        //Print ID/EX buffer contents
-        cout << "\nEX/MEM Pipeline Register:" << endl;
-        if (ex_mem.valid) {
-            cout << "  PC: 0x" << hex << setw(8) << setfill('0') << ex_mem.pc << dec << endl;
-            cout << "  ALU Result: 0x" << hex << setw(8) << setfill('0') << ex_mem.alu_result << dec << endl;
-            cout << "  RD: " << ex_mem.rd << endl;
-            cout << "  RegWrite: " << (ex_mem.reg_write ? "True" : "False") << endl;
-            cout << "  MemRead: " << (ex_mem.mem_read ? "True" : "False") << endl;
-            cout << "  MemWrite: " << (ex_mem.mem_write ? "True" : "False") << endl;
-            cout << "  Memory Width: " << static_cast<int>(ex_mem.mem_width) << endl;
-            cout << "  Branch Taken: " << (ex_mem.branch_taken ? "True" : "False") << endl;
-            cout << "  Terminate: " << (ex_mem.terminate ? "True" : "False") << endl;
-        }
-        cout << "  Valid: " << (ex_mem.valid ? "True" : "False") << endl;
     
-    }
-
     // Get operand values
     uint32_t operand1 = regState.getTemp("RA");
     uint32_t operand2;
@@ -748,9 +724,31 @@ void Simulator::stageExecute() {
         control_hazards++;
         stalls_control_hazards += 2;
     }
-    
     // Store ALU result in EX/MEM buffer
     ex_mem.alu_result = alu_result;
+
+    // For debugging/tracing
+    if(trace_instruction && id_ex.pc == trace_instruction_num) {
+        cout << "Instruction Tracing (Knob5): Instruction PC 0x" << hex << trace_instruction_num << dec << endl;
+        
+        cout << "\nEX/MEM Pipeline Register:" << endl;
+        if (ex_mem.valid) {
+            cout << "  PC: 0x" << hex << setw(8) << setfill('0') << ex_mem.pc << dec << endl;
+            cout << "  ALU Result: 0x" << hex << setw(8) << setfill('0') << ex_mem.alu_result << dec << endl;
+            cout << "  RD: " << ex_mem.rd << endl;
+            cout << "  RegWrite: " << (ex_mem.reg_write ? "True" : "False") << endl;
+            cout << "  MemRead: " << (ex_mem.mem_read ? "True" : "False") << endl;
+            cout << "  MemWrite: " << (ex_mem.mem_write ? "True" : "False") << endl;
+            cout << "  Memory Width: " << static_cast<int>(ex_mem.mem_width) << endl;
+            cout << "  Branch Taken: " << (ex_mem.branch_taken ? "True" : "False") << endl;
+            cout << "  Terminate: " << (ex_mem.terminate ? "True" : "False") << endl;
+        }
+        cout << "  Valid: " << (ex_mem.valid ? "True" : "False") << endl;
+    
+    }
+
+    
+    
     
     // Store result in temporary register for compatibility with existing code
     regState.setTemp("RZ", alu_result);
@@ -775,19 +773,7 @@ void Simulator::stageMemory() {
     // Default: pass ALU result to WB stage
     uint32_t result = regState.getTemp("RZ");
     
-    // For debugging/tracing
-    if(trace_instruction && ex_mem.pc == trace_instruction_num) {
-        cout << "Cycle " << clock << ": Instruction  PC " << trace_instruction_num 
-             << " in memory stage:"<< dec << endl;
-             cout << "\nMEM/WB Pipeline Register:" << endl;
-             if (mem_wb.valid) {
-                 cout << "  Result: 0x" << hex << setw(8) << setfill('0') << regState.getTemp("RY") << dec << endl;
-                 cout << "  RD: " << mem_wb.rd << endl;
-                 cout << "  RegWrite: " << (mem_wb.reg_write ? "True" : "False") << endl;
-                 cout << "  Terminate: " << (mem_wb.terminate ? "True" : "False") << endl;
-             }
-             cout << "  Valid: " << (mem_wb.valid ? "True" : "False") << endl;
-             }
+    
 
     uint32_t address = regState.getTemp("RZ");
     
@@ -822,7 +808,9 @@ void Simulator::stageMemory() {
         // Update MDR with loaded value
         regState.setTemp("MDR", result);
         regState.setTemp("RY", result);
-       
+        
+        // For statistics
+        data_transfer_instructions++;
     } else if (ex_mem.mem_write) {
         uint32_t data = ex_mem.rs2_val;
         
@@ -843,11 +831,34 @@ void Simulator::stageMemory() {
                 cerr << "Error: Unknown store width: 0x" << hex << ex_mem.mem_width << dec << endl;
                 break;
         }
+        
+        // For statistics
+        data_transfer_instructions++;
+        
        
         mem_wb.reg_write = false;
     } else {
         
         regState.setTemp("RY", result);
+    }
+
+    // For debugging/tracing
+    if(trace_instruction && ex_mem.pc == trace_instruction_num) {
+        cout << "Instruction Tracing (Knob5): Instruction PC 0x" << hex << trace_instruction_num << dec << endl;
+             cout << "\nMEM/WB Pipeline Register:" << endl;
+             if (mem_wb.valid) {
+                 cout << "  Result: 0x" << hex << setw(8) << setfill('0') << regState.getTemp("RY") << dec << endl;
+                 cout << "  RD: " << mem_wb.rd << endl;
+                 cout << "  RegWrite: " << (mem_wb.reg_write ? "True" : "False") << endl;
+                 cout << "  Terminate: " << (mem_wb.terminate ? "True" : "False") << endl;
+             }
+             cout << "  Valid: " << (mem_wb.valid ? "True" : "False") << endl;
+             }
+    
+    
+    if (ex_mem.branch_taken) {
+        // Branch was taken, update statistics
+        control_instructions++;
     }
 }
 
@@ -855,18 +866,21 @@ void Simulator::stageWriteBack() {
     if (!mem_wb.valid) {
         return;
     }
-    
-    if (trace_instruction && mem_wb.pc == trace_instruction_num) {
-        cout << "Cycle " << clock << " in write back stage" << endl;
-        //print register file
-        cout << "\nRegisters after write back:" << endl;
-        printRegisters();
-    }
 
 
     
     if (mem_wb.reg_write && mem_wb.rd != 0) {
         regState.setGen(mem_wb.rd, regState.getTemp("RY"));
+        
+        // for statistics
+        instructions_executed++;
+    }
+
+    if (trace_instruction && mem_wb.pc == trace_instruction_num) {
+        cout << "Instruction Tracing (Knob5): Instruction PC 0x" << hex << trace_instruction_num << dec << endl;
+        //print register file
+        cout << "\nRegisters after write back:" << endl;
+        printRegisters();
     }
     
     // check for data forwarding to resolve data hazards
@@ -1379,8 +1393,7 @@ void Simulator::detectHazards() {
     }
 }
 
-
-void Simulator::forwardData() {    
+void Simulator::forwardData() {
     stall_if = false;
     stall_id = false;
     flush_id_ex = false;
@@ -1391,7 +1404,7 @@ void Simulator::forwardData() {
     
     uint32_t rs1 = id_ex.rs1;
     uint32_t rs2 = id_ex.rs2;
-        
+    
     bool forward_a_from_ex_mem = false;
     bool forward_a_from_mem_wb = false;
     bool forward_b_from_ex_mem = false;
@@ -1399,67 +1412,53 @@ void Simulator::forwardData() {
     
     // check for forwarding from EX/MEM stage
     if (ex_mem.valid && ex_mem.reg_write && ex_mem.rd != 0) {
-        
         // forward from EX/MEM to rs1
         if (ex_mem.rd == rs1) {
             forward_a_from_ex_mem = true;
             data_hazards++;
-            cout << "Forwarding data from EX/MEM to RS1 (register " << rs1 << "), value: 0x" 
-                 << hex << ex_mem.alu_result << dec << endl;
         }
         
         // forward from EX/MEM to rs2
         if (ex_mem.rd == rs2) {
             forward_b_from_ex_mem = true;
             data_hazards++;
-            cout << "Forwarding data from EX/MEM to RS2 (register " << rs2 << "), value: 0x" 
-                 << hex << ex_mem.alu_result << dec << endl;
         }
     }
     
     // check for forwarding from MEM/WB stage
     if (mem_wb.valid && mem_wb.reg_write && mem_wb.rd != 0) {
-        
         // forward from MEM/WB to rs1 if not already forwarding from EX/MEM
         if (mem_wb.rd == rs1 && !forward_a_from_ex_mem) {
             forward_a_from_mem_wb = true;
             data_hazards++;
-            cout << "Forwarding data from MEM/WB to RS1 (register " << rs1 << "), value: 0x" 
-                 << hex << regState.getTemp("RY") << dec << endl;
         }
         
         // forward from MEM/WB to rs2 if not already forwarding from EX/MEM
         if (mem_wb.rd == rs2 && !forward_b_from_ex_mem) {
             forward_b_from_mem_wb = true;
             data_hazards++;
-            cout << "Forwarding data from MEM/WB to RS2 (register " << rs2 << "), value: 0x" 
-                 << hex << regState.getTemp("RY") << dec << endl;
         }
     }
     
     if (forward_a_from_ex_mem) {
         regState.setTemp("RA", ex_mem.alu_result);
-        cout << "Updated RA with EX/MEM result: 0x" << hex << ex_mem.alu_result << dec << endl;
     } else if (forward_a_from_mem_wb) {
         regState.setTemp("RA", regState.getTemp("RY"));
-        cout << "Updated RA with MEM/WB result: 0x" << hex << regState.getTemp("RY") << dec << endl;
     }
     
     if (forward_b_from_ex_mem) {
         regState.setTemp("RB", ex_mem.alu_result);
-        cout << "Updated RB with EX/MEM result: 0x" << hex << ex_mem.alu_result << dec << endl;
     } else if (forward_b_from_mem_wb) {
         regState.setTemp("RB", regState.getTemp("RY"));
-        cout << "Updated RB with MEM/WB result: 0x" << hex << regState.getTemp("RY") << dec << endl;
     }
     
     // check for load-use hazards
-    if (id_ex.valid && id_ex.mem_read && id_ex.rd != 0) {        
+    if (id_ex.valid && id_ex.mem_read && id_ex.rd != 0) {
         if (if_id.valid) {
             uint32_t instruction = if_id.instruction;
             uint32_t rs1_if = (instruction >> 15) & 0x1F;
             uint32_t rs2_if = (instruction >> 20) & 0x1F;
-                        
+            
             // check if the next instruction uses the result of the load
             if (id_ex.rd == rs1_if || id_ex.rd == rs2_if) {
                 stall_if = true;
@@ -1469,14 +1468,6 @@ void Simulator::forwardData() {
                 data_hazards++;
                 stalls_data_hazards++;
                 pipeline_stalls++;
-                
-                cout << "LOAD-USE HAZARD DETECTED! Stalling pipeline." << endl;
-                cout << "  - Load to register " << id_ex.rd << " followed by instruction using that register" << endl;
-                cout << "  - Setting stall_if=" << stall_if << ", stall_id=" << stall_id 
-                     << ", flush_id_ex=" << flush_id_ex << endl;
-                cout << "  - Total data hazards: " << data_hazards << ", stalls: " << stalls_data_hazards << endl;
-            } else {
-                cout << "No load-use hazard detected" << endl;
             }
         }
     }
@@ -1642,11 +1633,16 @@ void Simulator::setKnob5(int target_instr) {
     trace_instruction_num = target_instr;
     trace_instruction = (target_instr >= 0);
 
+    
+
+
     if (trace_instruction) {
-        cout << "Tracing enabled for instruction number: " << trace_instruction_num << endl;
-    } else {
-        cout<< "Invalid instruction number for tracing. Tracing disabled." << endl;
-        
+        if (target_instr % 4 != 0 || target_instr < 0) {
+            cerr << "Error: Invalid instruction address for tracing: 0x" << hex << target_instr << dec << endl;
+            trace_instruction = false;
+        } else {
+            cout << "Tracing instruction at PC: 0x" << hex << target_instr << dec << endl;
+        }
     }
 }
 

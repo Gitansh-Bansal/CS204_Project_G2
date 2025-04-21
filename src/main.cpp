@@ -3,6 +3,7 @@
 #include <thread>  
 #include <chrono>
 #include <unistd.h>
+#include <sstream>
 #include <wx/wx.h>
 #ifdef _WIN32
     #include <conio.h>  
@@ -42,7 +43,13 @@ void displayPipelineConfig(const Simulator& simulator) {
     cout << "Knob2 (Data Forwarding): " << (simulator.enable_data_forwarding ? "Enabled" : "Disabled") << endl;
     cout << "Knob3 (Register Printing): " << (simulator.print_registers_each_cycle ? "Enabled" : "Disabled") << endl;
     cout << "Knob4 (Pipeline State): " << (simulator.print_pipeline_registers ? "Enabled" : "Disabled") << endl;
-    cout << "Knob5 (Instruction Tracing): " << (simulator.trace_instruction ? "Instruction #" + to_string(simulator.trace_instruction_num) : "Disabled") << endl;
+    stringstream ss;
+    if (simulator.trace_instruction) {
+        ss << "Instruction #0x" << hex << simulator.trace_instruction_num;
+    } else {
+        ss << "Disabled";
+    }
+    cout << "Knob5 (Instruction Tracing): " << ss.str() << endl;
     cout << "Knob6 (Branch Predictor Printing): " << (simulator.print_branch_prediction ? "Enabled" : "Disabled") << endl;
     cout << "==================================\n";
 }
@@ -132,16 +139,24 @@ void configurePipelineKnobs(Simulator& simulator) {
             cout << "Enable Instruction Tracing (Knob5)? (y/n): ";
             cin >> input;
             if (input == 'y' || input == 'Y') {
-                int instr_num;
-                cout << "Enter PC to trace (-1 to disable): ";
-                cin >> instr_num;
+                int instr_pc;
+                //take instruction PC as input in hexadecimal format
+                cout << "Enter Valid Instruction PC (in hex): 0x";
+                cin >> hex >> instr_pc;
+                
                 if (cin.fail()) {
                     cin.clear();
                     cin.ignore(numeric_limits<streamsize>::max(), '\n');
                     cout << "Invalid number. Please enter a valid PC .\n";
                     continue;
                 }
-                simulator.setKnob5(instr_num);
+
+                if (instr_pc % 4 != 0 || instr_pc < 0) {
+                    cout << "Invalid instruction address. Please enter a valid PC.\n";
+                    continue;
+                }
+
+                simulator.setKnob5(instr_pc);
                 break;
             } else if (input == 'n' || input == 'N') {
                 simulator.setKnob5(-1);
@@ -242,14 +257,15 @@ void runConsole(Simulator& simulator) {
 
 int main(int argc, char** argv) {
     cout << "\n[Phase 1] Generating machine code...\n";
-    if (generateMC()){
+    if (generateMC()) 
+    {
         cerr << "Error: Failed to generate machine code.\n";
         return 1;
     } else {
         cout << "Machine code generated successfully.\n";
     }
 
-    cout << "\n[Phase 2 / 3] Initializing RISC-V Simulator...\n";
+    cout << "\n[Phase 2/3] Initializing RISC-V Simulator...\n";
     Simulator simulator;
 
     if (!simulator.loadProgram("output.mc")) {
@@ -258,14 +274,6 @@ int main(int argc, char** argv) {
     }
 
     if (argc > 1 && string(argv[1]) == "--gui") {
-        simulator.enable_pipelining = false;
-        simulator.enable_data_forwarding = false;
-        simulator.print_registers_each_cycle = false;
-        simulator.print_pipeline_registers = false;
-        simulator.trace_instruction = false;
-        simulator.trace_instruction_num = -1;
-        simulator.branch_prediction_enabled = false;
-        simulator.print_branch_prediction = false;
         wxEntryStart(argc, argv);
         wxTheApp->CallOnInit();
         wxTheApp->OnRun();
