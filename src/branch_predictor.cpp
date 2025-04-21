@@ -19,7 +19,7 @@ void BranchPredictor::reset() {
 }
 
 bool BranchPredictor::predict(uint32_t pc) {
-    total_predictions++;
+    //total_predictions++;
     
     // Align PC to 4-byte boundary
     uint32_t aligned_pc = pc & 0xFFFFFFFC;
@@ -72,6 +72,8 @@ void BranchPredictor::update(uint32_t pc, uint32_t target, bool taken) {
     
     // Update BTB with the target address
     btb[aligned_pc] = target;
+
+    total_predictions++;
     
     // Check if prediction was correct
     bool predicted_taken = was_predicted_taken(aligned_pc);
