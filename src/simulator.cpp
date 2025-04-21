@@ -438,6 +438,232 @@ void Simulator::stageDecode() {
     }
 }
 
+void Simulator::stageExecute() {
+    // Skip if ID/EX buffer doesn't contain a valid instruction
+    if (!id_ex.valid) {
+        ex_mem.valid = false;
+        return;
+    }
+
+    if (id_ex.terminate){
+        ex_mem.terminate = true;
+    }
+    
+    // Initialize EX/MEM buffer with values from ID/EX
+    ex_mem.pc = id_ex.pc;
+    ex_mem.rd = id_ex.rd;
+    ex_mem.reg_write = id_ex.reg_write;
+    ex_mem.mem_read = id_ex.mem_read;
+    ex_mem.mem_write = id_ex.mem_write;
+    ex_mem.mem_width = id_ex.mem_width;
+    ex_mem.valid = true;
+    ex_mem.branch_taken = false;
+    
+    // For debugging/tracing
+    if (trace_instruction && instructions_executed == trace_instruction_num) {
+        cout << "Cycle " << clock << ": Instruction " << trace_instruction_num 
+             << " in execute stage" << endl;
+    }
+
+    // Get operand values
+    uint32_t operand1 = regState.getTemp("RA");
+    uint32_t operand2;
+    
+    // Select second operand based on ALU_src
+    if (id_ex.ALU_src) {
+        operand2 = regState.getTemp("IMM");
+    } else {
+        operand2 = regState.getTemp("RB");
+    }
+    
+    // Store rs2_val for potential store instruction
+    ex_mem.rs2_val = regState.getTemp("RB");
+    
+    // Perform ALU operation based on alu_op
+    uint32_t alu_result = 0;
+    
+    switch (id_ex.alu_op) {
+        case ADD:
+            alu_result = operand1 + operand2;
+            break;
+            
+        case SUB:
+            alu_result = operand1 - operand2;
+            break;
+            
+        case MUL:
+            alu_result = operand1 * operand2;
+            break;
+            
+        case SLL:
+            alu_result = operand1 << (operand2 & 0x1F);
+            break;
+            
+        case SLT:
+            alu_result = (static_cast<int32_t>(operand1) < static_cast<int32_t>(operand2)) ? 1 : 0;
+            break;
+            
+        case XOR:
+            alu_result = operand1 ^ operand2;
+            break;
+            
+        case DIV:
+            if (operand2 != 0) {
+                alu_result = static_cast<int32_t>(operand1) / static_cast<int32_t>(operand2);
+            } else {
+                alu_result = 0xFFFFFFFF; // Division by zero
+                cout << "Warning: Division by zero attempted" << endl;
+            }
+            break;
+            
+        case SRL:
+            alu_result = static_cast<uint32_t>(operand1) >> (operand2 & 0x1F);
+            break;
+            
+        case SRA:
+            alu_result = static_cast<int32_t>(operand1) >> (operand2 & 0x1F);
+            break;
+            
+        case OR:
+            alu_result = operand1 | operand2;
+            break;
+            
+        case REM:
+            if (operand2 != 0) {
+                alu_result = static_cast<int32_t>(operand1) % static_cast<int32_t>(operand2);
+            } else {
+                alu_result = operand1; // Remainder when dividing by zero is the dividend
+                cout << "Warning: Remainder by zero attempted" << endl;
+            }
+            break;
+            
+        case AND:
+            alu_result = operand1 & operand2;
+            break;
+            
+        case LUI:
+            alu_result = operand2; // Immediate value for LUI
+            break;
+            
+        case AUIPC:
+            alu_result = operand1 + operand2; // PC + immediate for AUIPC
+
+            break;
+            
+        default:
+            alu_result = 0;
+            break;
+    }
+    
+    // Handle branch instructions
+    if (id_ex.branch) {
+        bool take_branch = false;
+        
+        switch (id_ex.branch_cond) {
+            case BranchCondition::BEQ:
+                take_branch = (operand1 == operand2);
+                break;
+            case BranchCondition::BNE:
+                take_branch = (operand1 != operand2);
+                break;
+            case BranchCondition::BLT:
+                take_branch = (static_cast<int32_t>(operand1) < static_cast<int32_t>(operand2));
+                break;
+            case BranchCondition::BGE:
+                take_branch = (static_cast<int32_t>(operand1) >= static_cast<int32_t>(operand2));
+                break;
+            default:
+                take_branch = false;
+                break;
+        }
+        
+        if (branch_prediction_enabled) {
+            bool was_predicted_taken = branch_predictor.was_predicted_taken(id_ex.pc);
+            uint32_t predicted_target = branch_predictor.get_target(id_ex.pc);
+            
+            // Update branch predictor with actual outcome
+            if (take_branch) {
+                uint32_t actual_target = id_ex.pc + regState.getTemp("IMM");
+                branch_predictor.update(id_ex.pc, actual_target, true);
+                
+                // Check if prediction was wrong
+                if (!was_predicted_taken || predicted_target != (id_ex.pc + regState.getTemp("IMM"))) {
+                    // Mispredicted - flush pipeline and update PC
+                    regState.setPC(id_ex.pc + regState.getTemp("IMM"));
+                    flush_if_id = true;
+                    flush_id_ex = true;
+                    branch_mispredictions++;
+                    control_hazards++;
+                    stalls_control_hazards += 2;
+                }
+            } else {
+                branch_predictor.update(id_ex.pc, id_ex.pc + 4, false);
+                
+                // Check if prediction was wrong
+                if (was_predicted_taken) {
+                    // Mispredicted - flush pipeline and update PC
+                    regState.setPC(id_ex.pc + 4);
+                    flush_if_id = true;
+                    flush_id_ex = true;
+                    branch_mispredictions++;
+                    control_hazards++;
+                    stalls_control_hazards += 2;
+                }
+            }
+        } else {
+            // Without branch prediction, always flush on taken branches
+            if (take_branch) {
+                regState.setPC(id_ex.pc + regState.getTemp("IMM"));
+                flush_if_id = true;
+                flush_id_ex = true;
+                control_hazards++;
+                stalls_control_hazards += 2;
+            }
+        }
+        
+        ex_mem.branch_taken = take_branch;
+    }
+    
+    // Handle jump instructions (JAL, JALR)
+    if (id_ex.jump) {
+        // Calculate return address (PC + 4)
+        alu_result = id_ex.pc + 4;
+        
+        // Calculate jump target
+        uint32_t jump_target;
+        if(id_ex.is_jal) {
+            jump_target = id_ex.pc + regState.getTemp("IMM");
+        } else {
+            jump_target = (regState.getTemp("RA") + regState.getTemp("IMM")) & 0xFFFFFFFE; // JALR target
+        }
+        
+        // Update PC and flush pipeline
+        regState.setPC(jump_target);
+        
+        // Invalidate any instructions in the pipeline
+        if_id.valid = false;
+        if_id.terminate = false;
+        flush_if_id = true;
+        flush_id_ex = true;
+        
+        // Update branch predictor if enabled
+        if (branch_prediction_enabled) {
+            branch_predictor.update(id_ex.pc, jump_target, true);
+        }
+        
+        // Update statistics
+        control_hazards++;
+        stalls_control_hazards += 2;
+    }
+    
+    // Store ALU result in EX/MEM buffer
+    ex_mem.alu_result = alu_result;
+    
+    // Store result in temporary register for compatibility with existing code
+    regState.setTemp("RZ", alu_result);
+    regState.setTemp("RM", regState.getTemp("RB"));
+}
+
 
 //function to fetch instruction
 void Simulator::fetch() {
