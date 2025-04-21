@@ -174,6 +174,72 @@ void Simulator::printMemory(uint32_t start_addr, uint32_t end_addr, char format)
     memory.printMemory(start_addr, end_addr, format);
 }
 
+void Simulator::stageFetch() {
+    // Skip fetch if stalled
+    if (stall_if) {
+        return;
+    }
+    
+    uint32_t current_pc = regState.getPC();
+    uint32_t instruction = memory.readWord(current_pc);
+    
+    // Check for termination condition (-1 or 0xffffffff)
+    if (instruction == 0xffffffff && !flush_if_id) {
+        if_id.pc = current_pc;
+        if_id.terminate = true;
+        if_id.valid = true;
+        if_id.instruction = instruction;
+        regState.setIR(instruction);
+        return;
+    }
+    
+    regState.setIR(instruction);
+    
+    if (!flush_if_id) {
+        if_id.pc = current_pc;
+        if_id.instruction = instruction;
+        if_id.valid = true;
+        if_id.terminate = false;  // Reset terminate flag for non-terminate instructions
+        
+        // Add branch prediction here
+        if (branch_prediction_enabled) {
+            // Check if this is a branch instruction (opcode 0x63) or jump (0x6F, 0x67)
+            uint32_t opcode = instruction & 0x7F;
+            if (opcode == 0x63 || opcode == 0x6F || opcode == 0x67) {
+                bool predicted_taken = branch_predictor.predict(current_pc);
+                if (predicted_taken) {
+                    // If predicted taken, get target from BTB
+                    uint32_t predicted_target = branch_predictor.get_target(current_pc);
+                    regState.setPC(predicted_target);
+                } else {
+                    // If predicted not taken, increment PC normally
+                    regState.setPC(current_pc + 4);
+                }
+            } else {
+                // For non-branch instructions, increment PC normally
+                regState.setPC(current_pc + 4);
+            }
+        } else {
+            // If branch prediction disabled, increment PC normally
+            regState.setPC(current_pc + 4);
+        }
+        
+        if (trace_instruction && instructions_executed == trace_instruction_num) {
+            cout << "Cycle " << clock << ": Instruction " << trace_instruction_num 
+                 << " fetched: 0x" << hex << instruction << dec << endl;
+        }
+    } else {
+        // During flush, invalidate everything in IF/ID
+        if_id.valid = false;
+        if_id.terminate = false;
+        if_id.instruction = 0x00000013;  // NOP instruction
+        flush_if_id = false;
+        
+        // For statistics
+        control_hazards++;
+    }
+}
+
 
 //function to fetch instruction
 void Simulator::fetch() {
