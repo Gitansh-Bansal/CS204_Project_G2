@@ -333,7 +333,7 @@ void Simulator::stageDecode() {
     id_ex.rd = decodedInst.rd;
     id_ex.rs1 = decodedInst.rs1;
     id_ex.rs2 = decodedInst.rs2;
-    id_ex.opcode = decodedInst.opcode;  // Set opcode
+    id_ex.chk_type = decodedInst.opcode;  // Set opcode
     id_ex.valid = true;
     
     // Set control signals based on the opcode
@@ -546,7 +546,7 @@ void Simulator::stageExecute() {
     ex_mem.mem_width = id_ex.mem_width;
     ex_mem.branch = id_ex.branch;
     ex_mem.jump = id_ex.jump;
-    ex_mem.opcode = id_ex.opcode;  // Propagate opcode
+    ex_mem.chk_type = id_ex.chk_type;  // Propagate opcode
     ex_mem.valid = true;
     ex_mem.branch_taken = false;
     
@@ -797,7 +797,7 @@ void Simulator::stageMemory() {
 
     mem_wb.rd = ex_mem.rd;
     mem_wb.reg_write = ex_mem.reg_write;
-    mem_wb.opcode = ex_mem.opcode;  // Propagate opcode
+    mem_wb.chk_type = ex_mem.chk_type;  // Propagate opcode
     mem_wb.pc = ex_mem.pc;
     mem_wb.valid = true;
     
@@ -889,7 +889,7 @@ void Simulator::stageWriteBack() {
         instructions_executed++;
 
         // Classify instruction based on opcode from MEM/WB buffer
-        switch(mem_wb.opcode) {
+        switch(mem_wb.chk_type) {
             case 0x03:  // Load instructions
             case 0x23:  // Store instructions
                 data_transfer_instructions++;
@@ -910,7 +910,7 @@ void Simulator::stageWriteBack() {
                 
             default:
                 cerr << "Unknown instruction type in WriteBack stage, opcode: 0x" 
-                     << hex << mem_wb.opcode << dec << endl;
+                     << hex << mem_wb.chk_type << dec << endl;
                 break;
         }
     }

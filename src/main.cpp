@@ -187,9 +187,9 @@ void runConsole(Simulator& simulator) {
     displayPipelineConfig(simulator);
 
     while (running) {
-        cout << "\n------------------- MENU -------------------" << endl;
-        cout << "[R] Run | [S] Step | [E] Exit | [V] View Registers | [M] View Memory" << endl;
-        cout << "---------------------------------------------" << endl;
+        cout << "\n---------------------------------------- MENU --------------------------------------------" << endl;
+        cout << "[R] Run | [S] Step | [E] Exit | [V] View Registers | [M] View Memory | [T] View Statistics" << endl;
+        cout << "-------------------------------------------------------------------------------------------" << endl;
         cout << "Press a key to choose an option... ";
         
         while (true) {
@@ -244,8 +244,11 @@ void runConsole(Simulator& simulator) {
                         }
                         break;
                     }             
+                    case 'T':
+                        simulator.printStatistics(false);
+                        break;
                     default:
-                        cout << "Invalid choice! Press R, S, E, V, M, P.\n";
+                        cout << "Invalid choice! Press R, S, E, V, M, T.\n";
                         break;
                 }
                 break;
@@ -257,15 +260,15 @@ void runConsole(Simulator& simulator) {
 
 int main(int argc, char** argv) {
     cout << "\n[Phase 1] Generating machine code...\n";
-    if (generateMC()) 
-    {
+    cout << "----------------------------------------\n";
+    if (generateMC()) {
         cerr << "Error: Failed to generate machine code.\n";
         return 1;
     } else {
         cout << "Machine code generated successfully.\n";
     }
 
-    cout << "\n[Phase 2/3] Initializing RISC-V Simulator...\n";
+    cout << "\n[Phase 2 / 3] Initializing RISC-V Simulator...\n";
     Simulator simulator;
 
     if (!simulator.loadProgram("output.mc")) {
@@ -274,6 +277,14 @@ int main(int argc, char** argv) {
     }
 
     if (argc > 1 && string(argv[1]) == "--gui") {
+        simulator.enable_pipelining = false;
+        simulator.enable_data_forwarding = false;
+        simulator.print_registers_each_cycle = false;
+        simulator.print_pipeline_registers = false;
+        simulator.trace_instruction = false;
+        simulator.print_branch_prediction = false;
+        simulator.branch_prediction_enabled = false;
+        simulator.trace_instruction_num = -1;
         wxEntryStart(argc, argv);
         wxTheApp->CallOnInit();
         wxTheApp->OnRun();

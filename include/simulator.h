@@ -62,7 +62,7 @@ struct ID_EX_Buffer {
     bool valid;  
     bool ALU_src; 
     bool is_jal;    
-    uint32_t opcode;
+    uint32_t chk_type;
 };
 
 // EX/MEM Buffer
@@ -80,7 +80,7 @@ struct EX_MEM_Buffer {
     bool branch;
     bool jump;
     bool valid;       
-    uint32_t opcode;
+    uint32_t chk_type;
 };
 
 // MEM/WB Buffer
@@ -90,7 +90,7 @@ struct MEM_WB_Buffer {
     bool reg_write;  
     bool valid;   
     uint32_t pc;
-    uint32_t opcode;
+    uint32_t chk_type;
 };
 
 
@@ -145,6 +145,7 @@ public:
     void setKnob4(bool enabled);
     void setKnob5(int target);
     void setKnob6(bool enabled);
+    void printStatistics(bool writeToFile) const;
     
 private:
     // Structure for decoded instruction
